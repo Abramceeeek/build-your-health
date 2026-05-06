@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 480" fill="none">
+  <!-- Head -->
+  <path d="M100 8 C82 8 72 20 72 36 C72 52 82 62 100 62 C118 62 128 52 128 36 C128 20 118 8 100 8Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Neck -->
+  <path d="M90 62 C88 62 86 64 86 68 L86 78 C86 80 88 82 90 82 L110 82 C112 82 114 80 114 78 L114 68 C114 64 112 62 110 62Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Shoulder / Deltoid -->
+  <path class="muscle-shoulders-l" d="M86 82 C86 82 72 80 60 84 C48 88 42 98 42 98 L50 100 C50 100 54 90 62 86 C70 82 80 84 86 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Shoulder / Deltoid -->
+  <path class="muscle-shoulders-r" d="M114 82 C114 82 128 80 140 84 C152 88 158 98 158 98 L150 100 C150 100 146 90 138 86 C130 82 120 84 114 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Pec -->
+  <path class="muscle-chest-l" d="M86 84 L62 86 C58 96 56 104 58 112 C60 120 66 126 72 128 L98 128 L98 90 C98 86 94 84 86 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Pec -->
+  <path class="muscle-chest-r" d="M114 84 L138 86 C142 96 144 104 142 112 C140 120 134 126 128 128 L102 128 L102 90 C102 86 106 84 114 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Bicep -->
+  <path class="muscle-biceps-l" d="M42 98 C40 104 38 112 36 120 C34 132 34 144 36 152 C38 158 42 160 46 158 L50 100Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Bicep -->
+  <path class="muscle-biceps-r" d="M158 98 C160 104 162 112 164 120 C166 132 166 144 164 152 C162 158 158 160 154 158 L150 100Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Forearm -->
+  <path class="muscle-forearms-l" d="M36 152 C34 162 32 174 30 186 C28 198 28 208 30 216 C32 220 36 220 38 216 L46 158Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Forearm -->
+  <path class="muscle-forearms-r" d="M164 152 C166 162 168 174 170 186 C172 198 172 208 170 216 C168 220 164 220 162 216 L154 158Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left hand -->
+  <path d="M30 216 C28 224 26 230 28 234 C30 238 34 238 36 234 C38 230 38 224 38 216Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right hand -->
+  <path d="M170 216 C172 224 174 230 172 234 C170 238 166 238 164 234 C162 230 162 224 162 216Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Abs / Core -->
+  <path class="muscle-core" d="M72 128 C72 128 70 140 70 156 C70 172 70 188 72 200 C74 212 76 220 80 226 L98 226 L98 128Z M128 128 C128 128 130 140 130 156 C130 172 130 188 128 200 C126 212 124 220 120 226 L102 226 L102 128Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Obliques left -->
+  <path d="M72 128 C68 132 64 142 62 156 C60 170 62 186 66 200 C68 208 72 216 80 226 L72 200 C70 188 70 172 70 156 C70 140 72 128 72 128Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.3"/>
+  <!-- Obliques right -->
+  <path d="M128 128 C132 132 136 142 138 156 C140 170 138 186 134 200 C132 208 128 216 120 226 L128 200 C130 188 130 172 130 156 C130 140 128 128 128 128Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.3"/>
+  <!-- Left Quad -->
+  <path class="muscle-quads-l" d="M80 226 C76 234 72 248 68 266 C64 286 62 308 62 326 C62 336 64 342 68 342 L96 342 C98 342 98 340 98 336 L98 226Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Quad -->
+  <path class="muscle-quads-r" d="M120 226 C124 234 128 248 132 266 C136 286 138 308 138 326 C138 336 136 342 132 342 L104 342 C102 342 102 340 102 336 L102 226Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Knee gap -->
+  <path d="M96 342 L96 352 C96 354 97 356 98 356 L102 356 C103 356 104 354 104 352 L104 342" fill="#1C1C1E" stroke="#3A3A3C" stroke-width="0.3"/>
+  <!-- Left Calf -->
+  <path class="muscle-calves-l" d="M68 342 C66 350 64 362 62 376 C60 392 62 408 64 420 C66 430 70 436 76 436 L94 436 C96 436 96 434 96 430 L96 356 C96 350 96 344 96 342Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Calf -->
+  <path class="muscle-calves-r" d="M132 342 C134 350 136 362 138 376 C140 392 138 408 136 420 C134 430 130 436 124 436 L106 436 C104 436 104 434 104 430 L104 356 C104 350 104 344 104 342Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Foot -->
+  <path d="M76 436 C72 440 66 446 62 450 C58 454 58 458 62 460 C66 462 74 462 82 460 C90 458 94 454 94 450 L94 436Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Foot -->
+  <path d="M124 436 C128 440 134 446 138 450 C142 454 142 458 138 460 C134 462 126 462 118 460 C110 458 106 454 106 450 L106 436Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+</svg>

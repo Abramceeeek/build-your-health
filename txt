@@ -1,0 +1,381 @@
+=====================================================================
+EXERCISE LIBRARY — ORGANIZED BY MUSCLE GROUP
+=====================================================================
+How it works: When you pick a muscle (e.g. "chest") for a gym day,
+the system searches ALL exercises below that muscle group and picks
+the configured number. Compound exercises get priority (top EMG rank
+first), then isolation exercises are shuffled for variety.
+
+Tiers:
+  BIG   = 4 exercises per session  (chest, back, legs)
+  MID   = 3 exercises (shoulders), 2 exercises (biceps, triceps)
+  SMALL = 2 exercises per session  (abs, neck, forearms, rear_delts, calves)
+
+A random "bonus" small muscle is also auto-added each session.
+=====================================================================
+
+
+=== CHEST — BIG muscle — picks 4 per session (18 available) ===
+  1. [compound] Bench Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bench-Press.gif
+  2. [compound] Incline Dumbbell Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Dumbbell-Press.gif
+  3. [isolation] Cable Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Crossover.gif
+  4. [compound] Push-up
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Push-Up.gif
+  5. [isolation] Dumbbell Chest Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Fly.gif
+  6. [compound] Dumbbell Bench Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Press.gif
+  7. [compound] Incline Barbell Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Incline-Barbell-Bench-Press.gif
+  8. [compound] Decline Barbell Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Decline-Bench-Press.gif
+  9. [compound] Weighted Dips
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Chest-Dip.gif
+  10. [compound] Machine Chest Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Machine-Bench-Press.gif
+  11. [isolation] Pec Deck Machine
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Pec-Deck.gif
+  12. [isolation] Dumbbell Pullover
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Pullover.gif
+  13. [stretch] Doorway Chest Stretch
+     https://gymvisual.com/img/p/3/2/8/3/7/32837.gif
+  14. [compound] Close-Grip Bench Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Close-Grip-Bench-Press.gif
+  15. [isolation] High-to-Low Cable Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/High-Cable-Fly.gif
+  16. [isolation] Low-to-High Cable Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Low-Cable-Fly.gif
+  17. [compound] Svend Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Svend-Press.gif
+  18. [compound] Diamond Push-up
+     https://fitnessprogramer.com/wp-content/uploads/2022/03/Diamond-Push-Up.gif
+
+
+=== BACK — BIG muscle — picks 4 per session (34 available) ===
+  1. [compound] Barbell Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Bent-Over-Row.gif
+  2. [compound] Pull-up
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Pull-up.gif
+  3. [compound] Lat Pulldown
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Lat-Pulldown.gif
+  4. [compound] Dumbbell Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Row.gif
+  5. [isolation] Face Pull
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Face-Pull.gif
+  6. [compound] Deadlift
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif
+  7. [compound] Seated Cable Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Seated-Cable-Row.gif
+  8. [isolation] Straight-Arm Pulldown
+     https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/CABLE_ARM_PULL_DOWN.gif
+  9. [isolation] Rear Delt Fly
+     https://pelank.com/wp-content/uploads/2025/01/Dumbbell-Reverse-Fly.gif
+  10. [compound] Rack Pulls
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Rack-Pull.gif
+  11. [compound] Pendlay Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/09/Pendlay-Row.gif
+  12. [isolation] Band Pull-Apart
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Band-pull-apart.gif
+  13. [isolation] Reverse Pec Deck
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Reverse-Fly-Machine.gif
+  14. [isolation] Bent-over Reverse Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Bent-Over-Reverse-Fly.gif
+  15. [compound] T-Bar Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/T-Bar-Row.gif
+  16. [compound] Chest-Supported Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Incline-Row.gif
+  17. [compound] Meadows Row
+     https://fitnessprogramer.com/wp-content/uploads/2022/07/Meadows-Row.gif
+  18. [compound] Supinated Lat Pulldown
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Underhand-Lat-Pulldown.gif
+  19. [compound] Single-Arm Cable Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/One-Arm-Cable-Row.gif
+  20. [compound] Inverted Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Inverted-Row.gif
+  21. [isolation] Cable Lateral Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Cable-Lateral-Raise.gif
+  22. [isolation] Tricep Kickback
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Kickback.gif
+  (+ more matched via "lat", "trapezius", "rhomboid" search terms)
+
+
+=== LEGS — BIG muscle — picks 4 per session (20 available) ===
+  1. [compound] Squat
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Back-Squat.gif
+  2. [compound] Deadlift
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Deadlift.gif
+  3. [compound] Romanian Deadlift
+     https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/RM_BB_DL.gif
+  4. [compound] Leg Press
+     https://fitnessprogramer.com/wp-content/uploads/2015/11/Leg-Press.gif
+  5. [compound] Bulgarian Split Squat
+     https://fitnessprogramer.com/wp-content/uploads/2021/05/Dumbbell-Bulgarian-Split-Squat.gif
+  6. [compound] Hip Thrust
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Hip-Thrust.gif
+  7. [isolation] Leg Curl
+     https://burnfit.io/wp-content/uploads/LEG_CURL.gif
+  8. [isolation] Leg Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/LEG-EXTENSION.gif
+  9. [compound] Walking Lunge
+     https://gymvisual.com/img/p/2/1/6/7/3/21673.gif
+  10. [compound] Front Squat
+     https://www.kettlebellkings.com/cdn/shop/articles/Front_Squats.gif?v=1694617488
+  11. [compound] Glute Bridge
+     https://fitnessprogramer.com/wp-content/uploads/2022/02/Banded-Glute-Bridge.gif
+  12. [stretch] Hip Flexor Stretch
+     https://fitnessprogramer.com/wp-content/uploads/2021/08/Kneeling-Hip-Flexor-Stretch.gif
+  13. [compound] Sumo Squat
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Sumo-Squat.gif
+  14. [compound] Hack Squat
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Hack-Squat.gif
+  15. [compound] Glute-Ham Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Glute-Ham-Raise.gif
+  16. [compound] Step-up
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Dumbbell-Step-Up.gif
+  17. [isolation] Single-Leg Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/09/Single-Leg-Calf-Raise.gif
+  18. [compound] Hanging Leg Raise
+     https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8utiwzsn11noMd8sH0r3jjZa1647Q7xAA6w&s
+  19. [cardio] Burpee
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Jack-Burpees.gif
+  20. [cardio] Mountain Climber
+     https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/MOUNT_CLIMB.gif
+
+
+=== SHOULDERS — MID muscle — picks 3 per session (42 available) ===
+  1. [compound] Overhead Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Shoulder-Press.gif
+  2. [compound] Dumbbell Shoulder Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Shoulder-Press.gif
+  3. [isolation] Lateral Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Lateral-Raise.gif
+  4. [compound] Arnold Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Arnold-Press.gif
+  5. [isolation] Face Pull
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Face-Pull.gif
+  6. [isolation] Rear Delt Fly
+     https://pelank.com/wp-content/uploads/2025/01/Dumbbell-Reverse-Fly.gif
+  7. [isolation] Front Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Front-Raise.gif
+  8. [compound] Push Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Push-Press.gif
+  9. [compound] Landmine Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Landmine-Press.gif
+  10. [compound] Machine Shoulder Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Machine-Shoulder-Press.gif
+  11. [isolation] Cable Lateral Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Cable-Lateral-Raise.gif
+  12. [isolation] Band Pull-Apart
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Band-pull-apart.gif
+  13. [compound] Upright Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Upright-Row.gif
+  14. [isolation] Wide-Grip Upright Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Upright-Row.gif
+  (+ 28 more matched via "shoulder", "deltoid", "delt" search terms —
+   includes many chest/back compounds that also hit delts)
+
+
+=== BICEPS — MID muscle — picks 2 per session (18 available) ===
+  1. [isolation] Dumbbell Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Curl.gif
+  2. [isolation] Hammer Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Hammer-Curl.gif
+  3. [isolation] EZ Bar Curl
+     https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/EZB_CURL.gif
+  4. [isolation] Barbell Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Curl.gif
+  5. [isolation] Incline DB Curl
+     https://burnfit.io/en/wp-content/uploads/sites/3/2026/01/INC_DB_CURL.gif
+  6. [isolation] Concentration Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Concentration-Curl.gif
+  7. [isolation] Preacher Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Preacher-Curl.gif
+  8. [isolation] Cable Bicep Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Bicep-Curl.gif
+  9. [isolation] Cable Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Curl.gif
+  10. [isolation] Spider Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Spider-Curl.gif
+  11. [isolation] Drag Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Drag-Curl.gif
+  12. [isolation] Cross Body Hammer Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cross-Body-Hammer-Curl.gif
+  13. [isolation] Zottman Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Zottman-Curl.gif
+  14. [isolation] Reverse Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Reverse-Barbell-Curl.gif
+  15. [compound] Chin-ups
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Chin-up.gif
+  (+ Pull-up, Cable Crunch, Bicycle Crunch matched via "curl" search)
+
+
+=== TRICEPS — MID muscle — picks 2 per session (22 available) ===
+  1. [isolation] Tricep Pushdown
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Pushdown.gif
+  2. [isolation] Overhead Tricep Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Triceps-Extension.gif
+  3. [compound] Close-Grip Bench Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Close-Grip-Bench-Press.gif
+  4. [isolation] Skull Crusher
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Dumbbell-Skull-Crusher.gif
+  5. [compound] Tricep Dip
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Bench-Dips.gif
+  6. [isolation] Rope Pushdown
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Rope-Pushdown.gif
+  7. [isolation] Rope Tricep Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Rope-Overhead-Triceps-Extension.gif
+  8. [isolation] Cable Overhead Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Triceps-Extension.gif
+  9. [isolation] Single Arm Reverse Pushdown
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Reverse-Grip-Triceps-Pushdown.gif
+  10. [isolation] Overhead DB Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Triceps-Extension.gif
+  11. [compound] Tate Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Tate-Press.gif
+  12. [compound] JM Press
+     https://fitnessprogramer.com/wp-content/uploads/2022/05/JM-Press.gif
+  13. [isolation] Tricep Kickback
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Kickback.gif
+  14. [compound] Diamond Push-up
+     https://fitnessprogramer.com/wp-content/uploads/2022/03/Diamond-Push-Up.gif
+  (+ Bench Press, Dips, Leg Extension matched via "extension"/"pushdown" terms)
+
+
+=== ABS — SMALL muscle — picks 2 per session (29 available) ===
+  1. [isometric] Plank
+     https://fitnessprogramer.com/wp-content/uploads/2021/04/Weighted-Front-Plank.gif
+  2. [compound] Ab Wheel Rollout
+     https://i.pinimg.com/originals/81/c6/ac/81c6ac9bf4e3de344451a42286cb89be.gif
+  3. [compound] Hanging Leg Raise
+     https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR8utiwzsn11noMd8sH0r3jjZa1647Q7xAA6w&s
+  4. [compound] Russian Twist
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Russian-Twist.gif
+  5. [isometric] Dead Bug
+     https://fitnessprogramer.com/wp-content/uploads/2021/05/Dead-Bug.gif
+  6. [isolation] Cable Crunch
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Kneeling-Cable-Crunch.gif
+  7. [isolation] Bicycle Crunch
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Bicycle-Crunch.gif
+  (+ many compounds like Squat, Deadlift, Pull-up matched via "core"/"ab" tags)
+
+
+=== NECK — SMALL muscle — picks 2 per session (7 available) ===
+  1. [stretch] Chin Tuck
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Chin-Tuck.gif
+  2. [isolation] Plate Neck Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Neck-Curl.gif
+  3. [isolation] Plate Neck Extension
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Neck-Extension.gif
+  4. [isolation] Neck Side Flexion
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Lateral-Neck-Flexion.gif
+  5. [isolation] Neck Harness
+     https://fitnessprogramer.com/wp-content/uploads/2022/04/Neck-Harness.gif
+  6. [isolation] Resistance Band Neck Press
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Neck-Flexion-With-Resistance-Band.gif
+  7. [isometric] Manual Resistance Neck
+     https://fitnessprogramer.com/wp-content/uploads/2021/10/Manual-Neck-Flexion.gif
+
+
+=== FOREARMS — SMALL muscle — picks 2 per session (15 available) ===
+  1. [isolation] Wrist Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Wrist-Curl.gif
+  2. [isolation] Reverse Wrist Curl
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Reverse-Wrist-Curl.gif
+  3. [compound] Farmer's Carry
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Farmers-Walk.gif
+  4. [isometric] Plate Pinch
+     https://fitnessprogramer.com/wp-content/uploads/2023/01/Plate-Pinch.gif
+  5. [isometric] Dead Hang
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dead-Hang.gif
+  6. [isometric] Towel Pull-up Hang
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Towel-Pull-Up.gif
+  7. [isolation] Wide-Grip Upright Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Upright-Row.gif
+  (+ Pull-up, Deadlift, Hammer Curl, EZ Bar Curl matched via "grip"/"forearm" tags)
+
+
+=== REAR DELTS — SMALL muscle — picks 2 per session (17 available) ===
+  1. [isolation] Face Pull
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Face-Pull.gif
+  2. [isolation] Rear Delt Fly
+     https://pelank.com/wp-content/uploads/2025/01/Dumbbell-Reverse-Fly.gif
+  3. [isolation] Band Pull-Apart
+     https://fitnessprogramer.com/wp-content/uploads/2021/06/Band-pull-apart.gif
+  4. [isolation] Reverse Pec Deck
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Reverse-Fly-Machine.gif
+  5. [isolation] Bent-over Reverse Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Bent-Over-Reverse-Fly.gif
+  6. [isolation] Cable Reverse Fly
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Cable-Crossover-Reverse-Fly.gif
+  7. [isolation] Wide-Grip Upright Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Upright-Row.gif
+  8. [compound] T-Bar Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/T-Bar-Row.gif
+  9. [compound] Chest-Supported Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Incline-Row.gif
+  10. [compound] Inverted Row
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Inverted-Row.gif
+  (+ Barbell Row, Pull-up, Lat Pulldown, Seated Cable Row, etc.)
+
+
+=== CALVES — SMALL muscle — picks 2 per session (8 available) ===
+  1. [isolation] Standing Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Standing-Calf-Raise.gif
+  2. [isolation] Seated Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Seated-Calf-Raise.gif
+  3. [isolation] Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Dumbbell-Calf-Raise.gif
+  4. [isolation] Donkey Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Donkey-Calf-Raise.gif
+  5. [isolation] Smith Machine Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Smith-Machine-Standing-Calf-Raise.gif
+  6. [isolation] Single-Leg Calf Raise
+     https://fitnessprogramer.com/wp-content/uploads/2021/09/Single-Leg-Calf-Raise.gif
+  7. [compound] Squat
+     https://fitnessprogramer.com/wp-content/uploads/2021/02/Barbell-Back-Squat.gif
+  8. [cardio] Jump Rope
+     https://fitnessprogramer.com/wp-content/uploads/2023/10/Skip-Jump-Rope.gif
+
+
+=====================================================================
+EXAMPLE: If you pick "Back + Triceps + Neck" for Friday:
+=====================================================================
+  BACK (4 exercises):
+    → 1 top compound by EMG rank (e.g. Barbell Row or Pull-up)
+    → 3 more shuffled from the 34-exercise back pool
+
+  TRICEPS (2 exercises):
+    → 1 compound (e.g. Close-Grip Bench Press)
+    → 1 isolation shuffled (e.g. Rope Pushdown or Skull Crusher)
+
+  NECK (2 exercises):
+    → 2 from the 7-exercise neck pool (e.g. Plate Neck Curl + Neck Harness)
+
+  BONUS (2 exercises):
+    → System auto-adds a random small muscle you didn't pick
+      (e.g. calves → Standing Calf Raise + Seated Calf Raise)
+
+  TOTAL: ~10 exercises + warm-up
+=====================================================================
+
+
+=====================================================================
+CODE LOCATIONS
+=====================================================================
+Exercise definitions (seed data):
+  backend/services/exercise_service.py        — lines 14-1542 (SEED_EXERCISES list)
+
+Science enrichment data (EMG, reps, rest, tempo):
+  backend/services/exercise_enrichment.py     — ENRICHMENT dict
+
+Muscle group definitions & workout builder:
+  backend/services/muscle_workout_builder.py  — MUSCLE_GROUPS (line 29-44)
+                                              — MUSCLE_SEARCH_TERMS (line 50-62)
+                                              — _find_exercises_for_muscle() (line 123)
+                                              — build_workout_for_day() (line 244)
+
+Database model:
+  backend/models/database.py                  — ExerciseLibrary class (line ~250)

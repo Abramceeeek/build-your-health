@@ -1,0 +1,14 @@
+.env
+.tunnel_url
+.cloudflared.log
+.cloudflared-empty.yml
+__pycache__/
+*.pyc
+uploads/
+*.db
+graphify-out/
+BROKEN_EXERCISES.md
+broken_exercises.json
+.venv/
+.idea/
+.DS_Store

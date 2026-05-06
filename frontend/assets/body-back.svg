@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 480" fill="none">
+  <!-- Head -->
+  <path d="M100 8 C82 8 72 20 72 36 C72 52 82 62 100 62 C118 62 128 52 128 36 C128 20 118 8 100 8Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Neck -->
+  <path d="M90 62 C88 62 86 64 86 68 L86 78 C86 80 88 82 90 82 L110 82 C112 82 114 80 114 78 L114 68 C114 64 112 62 110 62Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Rear Deltoid -->
+  <path class="muscle-shoulders-l" d="M86 82 C86 82 72 80 60 84 C48 88 42 98 42 98 L50 100 C50 100 54 90 62 86 C70 82 80 84 86 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Rear Deltoid -->
+  <path class="muscle-shoulders-r" d="M114 82 C114 82 128 80 140 84 C152 88 158 98 158 98 L150 100 C150 100 146 90 138 86 C130 82 120 84 114 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Upper Back / Lat -->
+  <path class="muscle-back-l" d="M86 84 C80 84 74 86 68 90 C62 94 58 100 58 108 C58 118 60 128 64 138 C68 148 72 154 76 156 L98 156 L98 90 C98 86 92 84 86 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Upper Back / Lat -->
+  <path class="muscle-back-r" d="M114 84 C120 84 126 86 132 90 C138 94 142 100 142 108 C142 118 140 128 136 138 C132 148 128 154 124 156 L102 156 L102 90 C102 86 108 84 114 84Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Tricep -->
+  <path class="muscle-triceps-l" d="M42 98 C40 104 38 112 36 120 C34 132 34 144 36 152 C38 158 42 160 46 158 L50 100Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Tricep -->
+  <path class="muscle-triceps-r" d="M158 98 C160 104 162 112 164 120 C166 132 166 144 164 152 C162 158 158 160 154 158 L150 100Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Forearm -->
+  <path class="muscle-forearms-l" d="M36 152 C34 162 32 174 30 186 C28 198 28 208 30 216 C32 220 36 220 38 216 L46 158Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Forearm -->
+  <path class="muscle-forearms-r" d="M164 152 C166 162 168 174 170 186 C172 198 172 208 170 216 C168 220 164 220 162 216 L154 158Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left hand -->
+  <path d="M30 216 C28 224 26 230 28 234 C30 238 34 238 36 234 C38 230 38 224 38 216Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right hand -->
+  <path d="M170 216 C172 224 174 230 172 234 C170 238 166 238 164 234 C162 230 162 224 162 216Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Lower Back -->
+  <path d="M76 156 C74 164 72 172 72 180 L98 180 L98 156Z M124 156 C126 164 128 172 128 180 L102 180 L102 156Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.3"/>
+  <!-- Glutes -->
+  <path class="muscle-glutes" d="M72 180 C68 186 64 196 64 208 C64 220 68 228 76 232 C82 236 90 236 98 234 L98 180Z M128 180 C132 186 136 196 136 208 C136 220 132 228 124 232 C118 236 110 236 102 234 L102 180Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Hamstring -->
+  <path class="muscle-hamstrings-l" d="M76 232 C72 240 68 254 66 272 C64 292 62 314 62 332 C62 340 64 344 68 344 L96 344 C98 344 98 342 98 338 L98 234Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Hamstring -->
+  <path class="muscle-hamstrings-r" d="M124 232 C128 240 132 254 134 272 C136 292 138 314 138 332 C138 340 136 344 132 344 L104 344 C102 344 102 342 102 338 L102 234Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Knee gap -->
+  <path d="M96 344 L96 354 C96 356 97 358 98 358 L102 358 C103 358 104 356 104 354 L104 344" fill="#1C1C1E" stroke="#3A3A3C" stroke-width="0.3"/>
+  <!-- Left Rear Calf -->
+  <path class="muscle-calves-l" d="M68 344 C66 352 64 364 62 378 C60 394 62 410 64 422 C66 432 70 438 76 438 L94 438 C96 438 96 436 96 432 L96 358 C96 352 96 346 96 344Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Rear Calf -->
+  <path class="muscle-calves-r" d="M132 344 C134 352 136 364 138 378 C140 394 138 410 136 422 C134 432 130 438 124 438 L106 438 C104 438 104 436 104 432 L104 358 C104 352 104 346 104 344Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Left Foot -->
+  <path d="M76 438 C72 442 66 448 62 452 C58 456 58 460 62 462 C66 464 74 464 82 462 C90 460 94 456 94 452 L94 438Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+  <!-- Right Foot -->
+  <path d="M124 438 C128 442 134 448 138 452 C142 456 142 460 138 462 C134 464 126 464 118 462 C110 460 106 456 106 452 L106 438Z" fill="#2C2C2E" stroke="#3A3A3C" stroke-width="0.5"/>
+</svg>
