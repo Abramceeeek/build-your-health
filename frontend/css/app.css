@@ -1606,6 +1606,24 @@ html, body {
   cursor: pointer;
   flex-shrink: 0;
 }
+.food-scan-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.food-scan-btn:active,
+.food-scan-btn.active {
+  color: var(--blue);
+  background: var(--bg-tertiary);
+}
 .food-search-results {
   flex: 1;
   overflow-y: auto;

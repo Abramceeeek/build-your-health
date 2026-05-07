@@ -807,8 +807,103 @@ function openFoodSearch(meal) {
 }
 
 function closeFoodSearch() {
+  closeBarcodeScanner();
   document.getElementById('foodSearchOverlay').style.display = 'none';
   document.getElementById('customFoodForm').style.display = 'none';
+}
+
+// ─── BARCODE SCANNER ─────────────────────────────
+let _barcodeScanRAF = null;
+let _barcodeStream = null;
+
+async function toggleBarcodeScanner() {
+  const panel = document.getElementById('barcodeScanPanel');
+  const btn = document.querySelector('.food-scan-btn');
+  if (panel.style.display !== 'none') {
+    closeBarcodeScanner();
+    if (btn) btn.classList.remove('active');
+    return;
+  }
+  panel.style.display = 'block';
+  if (btn) btn.classList.add('active');
+
+  if (!('BarcodeDetector' in window)) {
+    document.getElementById('barcodeVideoWrap').style.display = 'none';
+    document.getElementById('barcodeManualWrap').style.display = 'block';
+    return;
+  }
+
+  try {
+    _barcodeStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('barcodeVideo');
+    video.srcObject = _barcodeStream;
+    await video.play();
+
+    const detector = new BarcodeDetector({
+      formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39'],
+    });
+    _barcodeScanRAF = 1;
+    const scan = async () => {
+      if (!_barcodeScanRAF) return;
+      if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+        const codes = await detector.detect(video).catch(() => []);
+        if (codes.length > 0) {
+          haptic('success');
+          closeBarcodeScanner();
+          await _lookupBarcode(codes[0].rawValue);
+          return;
+        }
+      }
+      _barcodeScanRAF = requestAnimationFrame(scan);
+    };
+    _barcodeScanRAF = requestAnimationFrame(scan);
+  } catch (_) {
+    document.getElementById('barcodeVideoWrap').style.display = 'none';
+    document.getElementById('barcodeManualWrap').style.display = 'block';
+  }
+}
+
+function closeBarcodeScanner() {
+  _barcodeScanRAF = null;
+  if (_barcodeStream) {
+    _barcodeStream.getTracks().forEach(t => t.stop());
+    _barcodeStream = null;
+  }
+  const video = document.getElementById('barcodeVideo');
+  if (video) video.srcObject = null;
+  const panel = document.getElementById('barcodeScanPanel');
+  if (panel) panel.style.display = 'none';
+  const btn = document.querySelector('.food-scan-btn');
+  if (btn) btn.classList.remove('active');
+  const manualWrap = document.getElementById('barcodeManualWrap');
+  if (manualWrap) manualWrap.style.display = 'none';
+  const videoWrap = document.getElementById('barcodeVideoWrap');
+  if (videoWrap) videoWrap.style.display = 'block';
+}
+
+async function _lookupBarcodeManual() {
+  const code = (document.getElementById('barcodeManualInput')?.value || '').trim();
+  if (!code) { showToast('Enter a barcode number'); return; }
+  closeBarcodeScanner();
+  await _lookupBarcode(code);
+}
+
+async function _lookupBarcode(code) {
+  const resultsEl = document.getElementById('foodSearchResults');
+  resultsEl.innerHTML = '<div class="food-search-empty">Looking up barcode...</div>';
+  try {
+    const result = await API.lookupBarcode(code);
+    resultsEl.innerHTML = `
+      <div class="food-result-item" onclick='selectFoodResult(${JSON.stringify(result).replace(/'/g, "&#39;")})'>
+        <div class="food-result-name">${result.name}</div>
+        <div class="food-result-macros">
+          ${Math.round(result.calories_per_100g)} kcal · ${Math.round(result.protein_per_100g)}p · ${Math.round(result.carbs_per_100g)}c · ${Math.round(result.fat_per_100g)}f
+          <span class="food-result-source">Barcode</span>
+        </div>
+      </div>`;
+  } catch (e) {
+    resultsEl.innerHTML = `<div class="food-search-empty">${e.message || 'Product not found'}</div>`;
+  }
 }
 
 function toggleCustomFoodForm() {

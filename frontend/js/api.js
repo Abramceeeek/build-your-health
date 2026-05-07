@@ -149,6 +149,9 @@ const API = {
   getShortcutToken: () => api('/api/users/me/shortcut-token'),
   wearableSync: (data) => api('/api/health/wearable-sync', { method: 'POST', body: JSON.stringify(data) }),
 
+  // Barcode lookup
+  lookupBarcode: (barcode) => api(`/api/nutrition/barcode/${encodeURIComponent(barcode)}`),
+
   // Cycle tracking
   logPeriod: (data) => api('/api/health/cycle/log-period', { method: 'POST', body: JSON.stringify(data) }),
   getCyclePhase: () => api('/api/health/cycle/phase'),

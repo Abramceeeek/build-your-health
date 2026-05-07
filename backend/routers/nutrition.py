@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -331,6 +331,126 @@ async def suggest_meals(
     pro_target = t["daily_protein_g"]
     from backend.services.ai_service import suggest_budget_meals
     return await suggest_budget_meals(cal_target, pro_target, data.budget_level, data.region_hint)
+
+
+# ─── BARCODE LOOKUP ──────────────────────────────────────────────────────────
+
+@router.get("/barcode/{barcode}")
+async def lookup_barcode(
+    barcode: str,
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Look up a food product by barcode via Open Food Facts. Caches results."""
+    import httpx
+
+    cached = db.query(FoodCache).filter(
+        FoodCache.source == "off",
+        FoodCache.source_id == barcode,
+    ).first()
+    if cached:
+        return {
+            "source": cached.source,
+            "source_id": cached.source_id,
+            "name": cached.name,
+            **cached.nutrients_per_100g_json,
+        }
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(
+                f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json",
+                headers={"User-Agent": "build-your-health/1.0"},
+            )
+    except Exception:
+        raise HTTPException(status_code=503, detail="Open Food Facts unavailable")
+
+    if r.status_code != 200 or r.json().get("status") != 1:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product = r.json()["product"]
+    n = product.get("nutriments", {})
+    name = (product.get("product_name") or product.get("product_name_en") or "").strip()
+    if not name:
+        raise HTTPException(status_code=404, detail="Product has no name")
+
+    nutrients = {
+        "calories_per_100g": float(n.get("energy-kcal_100g") or 0),
+        "protein_per_100g":  float(n.get("proteins_100g") or 0),
+        "carbs_per_100g":    float(n.get("carbohydrates_100g") or 0),
+        "fat_per_100g":      float(n.get("fat_100g") or 0),
+        "fibre_per_100g":    float(n.get("fiber_100g") or n.get("fibre_100g") or 0),
+    }
+
+    try:
+        db.add(FoodCache(source="off", source_id=barcode, name=name, nutrients_per_100g_json=nutrients))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    return {"source": "off", "source_id": barcode, "name": name, **nutrients}
+
+
+# ─── FOOD PHOTO IDENTIFICATION ───────────────────────────────────────────────
+
+@router.post("/identify-photo")
+async def identify_food_photo(
+    file: UploadFile = File(...),
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Identify foods in a photo using Claude vision and return macros per item.
+
+    Rate limited to 10 requests per hour per user.
+    """
+    user = get_or_create_user(db, tg_user)
+
+    if not check_rate_limit(user.id, "food_photo_identify", max_calls=10):
+        raise HTTPException(status_code=429, detail="Rate limit: 10 food photo identifications per hour.")
+
+    # Validate content type
+    content_type = file.content_type or "image/jpeg"
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=422, detail="File must be an image.")
+
+    image_bytes = await file.read()
+    if len(image_bytes) > 10 * 1024 * 1024:   # 10 MB guard
+        raise HTTPException(status_code=413, detail="Image too large. Max 10 MB.")
+
+    from backend.services.claude_service import identify_food_from_image
+    identified = await identify_food_from_image(image_bytes, content_type)
+
+    if not identified:
+        return {"foods": []}
+
+    # Enrich with nutrition data from food_cache
+    results = []
+    for item in identified:
+        name  = item.get("name", "")
+        grams = float(item.get("estimated_grams") or 100)
+        conf  = float(item.get("confidence") or 0.5)
+
+        # Search food cache for macros
+        from backend.services.nutrition_service import search_combined
+        matches = await search_combined(name, db)
+        macros = matches[0] if matches else {}
+
+        scale = grams / 100.0
+        results.append({
+            "name": name,
+            "estimated_grams": round(grams, 0),
+            "confidence": round(conf, 2),
+            "calories":   round((macros.get("calories_per_100g") or 0) * scale, 1),
+            "protein_g":  round((macros.get("protein_per_100g") or 0) * scale, 1),
+            "carbs_g":    round((macros.get("carbs_per_100g") or 0) * scale, 1),
+            "fat_g":      round((macros.get("fat_per_100g") or 0) * scale, 1),
+            "fibre_g":    round((macros.get("fibre_per_100g") or 0) * scale, 1),
+            "source":     macros.get("source", ""),
+            "source_id":  macros.get("source_id", ""),
+            "matched_food_name": macros.get("name", name),
+        })
+
+    return {"foods": results}
 
 
 # ─── WEEKLY AI ANALYSIS ──────────────────────────────────────────────────────

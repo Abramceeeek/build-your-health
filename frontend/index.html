@@ -363,7 +363,29 @@
   <div class="food-search-panel">
     <div class="food-search-header">
       <input type="text" class="food-search-input" id="foodSearchInput" placeholder="Search food..." oninput="debounceFoodSearch()">
+      <button class="food-scan-btn" onclick="toggleBarcodeScanner()" title="Scan barcode" aria-label="Scan barcode">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9V6a2 2 0 012-2h3M15 4h3a2 2 0 012 2v3M21 15v3a2 2 0 01-2 2h-3M9 20H6a2 2 0 01-2-2v-3"/>
+          <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
+          <line x1="13" y1="8" x2="13" y2="16"/><line x1="16" y1="8" x2="16" y2="13"/>
+        </svg>
+      </button>
       <button class="food-search-close" onclick="closeFoodSearch()">Cancel</button>
+    </div>
+    <div id="barcodeScanPanel" style="display:none;padding:8px 12px 4px">
+      <div id="barcodeVideoWrap" style="position:relative;width:100%;border-radius:10px;overflow:hidden;background:#000">
+        <video id="barcodeVideo" style="width:100%;height:180px;object-fit:cover;display:block" autoplay playsinline muted></video>
+        <div style="position:absolute;top:50%;left:12%;right:12%;height:2px;background:rgba(255,59,48,0.85);transform:translateY(-50%);box-shadow:0 0 8px rgba(255,59,48,0.5)"></div>
+        <div style="position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:11px;color:rgba(255,255,255,0.7)">Point camera at barcode</div>
+        <button onclick="closeBarcodeScanner()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.55);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px;line-height:1">✕</button>
+      </div>
+      <div id="barcodeManualWrap" style="display:none;margin-top:8px">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">Camera scan not supported. Enter barcode number:</div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="barcodeManualInput" class="gate-input" style="flex:1;margin:0" placeholder="e.g. 4607037797265" inputmode="numeric" pattern="[0-9]*">
+          <button class="btn btn-primary" onclick="_lookupBarcodeManual()" style="white-space:nowrap;padding:10px 14px;font-size:13px">Look up</button>
+        </div>
+      </div>
     </div>
     <div style="padding:0 12px 8px">
       <button class="btn" style="width:100%;padding:10px;background:var(--bg-tertiary);color:var(--blue);border:1px dashed var(--blue);font-size:13px" onclick="toggleCustomFoodForm()">+ Add Custom Food</button>
