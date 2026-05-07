@@ -13,6 +13,7 @@ COPY alembic/ alembic/
 COPY alembic.ini .
 COPY bot.py .
 COPY main.py .
+COPY scripts/ scripts/
 
 # Create uploads directory
 RUN mkdir -p /data uploads/photos
