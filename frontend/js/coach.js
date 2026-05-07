@@ -159,13 +159,19 @@ const CoachModule = (() => {
     const flag = m.flagged_injury
       ? ` <span class="coach-flag" title="Flagged as injury">flagged</span>`
       : '';
+    const papers = (m.papers && m.papers.length)
+      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${m.papers.map(p =>
+          `<button type="button" class="coach-chip" style="font-size:10px;padding:3px 8px;opacity:0.8" onclick="openPubMedLink('${_esc(p.url)}')">📄 PMID ${_esc(p.pmid)}</button>`
+        ).join('')}</div>`
+      : '';
     return `
       <div class="coach-msg coach-msg-${role}">
         <div class="coach-msg-body">${_esc(m.body)}</div>
-        ${flag}
+        ${flag}${papers}
       </div>
     `;
   }
+
 
   async function _onSubmit(e) {
     e.preventDefault();

@@ -113,7 +113,16 @@ const API = {
 
   getHealthToday: () => api('/api/health/today'),
   updateHealth: (data) => api('/api/health/update', { method: 'POST', body: JSON.stringify(data) }),
+  patchWearable: (data) => api('/api/health/today', { method: 'PATCH', body: JSON.stringify(data) }),
   getHealthHistory: (days = 7) => api(`/api/health/history?days=${days}`),
+  getReadiness: (date) => api(`/api/health/readiness/${date}`),
+  getReadinessHistory: (days = 7) => api(`/api/health/readiness-history?days=${days}`),
+
+  identifyFoodPhoto: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api('/api/nutrition/identify-photo', { method: 'POST', body: form });
+  },
 
   // Settings / Registration
   getRegistration: () => api('/api/users/registration'),
@@ -132,4 +141,15 @@ const API = {
   getCoachToday: () => api('/api/coach/today'),
   getCoachMessages: (limit = 50) => api(`/api/coach/messages?limit=${limit}`),
   sendCoachMessage: (body) => api('/api/coach/message', { method: 'POST', body: JSON.stringify({ body }) }),
+
+  // Biological age
+  getBioAge: () => api('/api/users/me/bio-age'),
+
+  // Apple Watch / wearable sync
+  getShortcutToken: () => api('/api/users/me/shortcut-token'),
+  wearableSync: (data) => api('/api/health/wearable-sync', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Cycle tracking
+  logPeriod: (data) => api('/api/health/cycle/log-period', { method: 'POST', body: JSON.stringify(data) }),
+  getCyclePhase: () => api('/api/health/cycle/phase'),
 };

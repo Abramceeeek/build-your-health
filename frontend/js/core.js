@@ -225,8 +225,7 @@ function switchPage(page) {
   // Scroll to top on page change
   window.scrollTo(0, 0);
 
-  if (page === 'compete') loadCompetePage();
-  if (page === 'progress') { loadCalendar(); loadBadges(); loadAchievements(); loadHabitsPage(); loadHeatmap(); }
+  if (page === 'progress') { loadCalendar(); loadBadges(); loadAchievements(); loadHabitsPage(); loadHeatmap(); loadCompetePage(); }
   if (page === 'assistant') { loadMetrics(); loadProgressTimeline(); loadAssistantStatus(); }
   if (page === 'nutrition') loadNutritionPage();
   if (page === 'settings') loadSettingsPage();

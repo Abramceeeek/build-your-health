@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import secrets
 import time
 from urllib.parse import unquote, parse_qs
 from fastapi import Request, HTTPException, Depends
@@ -78,6 +79,27 @@ async def get_current_user(request: Request) -> dict:
         except ValueError as e:
             raise HTTPException(status_code=401, detail=str(e))
 
+    if auth_header.startswith("sync "):
+        # Stable token for Apple Watch Shortcut / companion app — does not expire.
+        token = auth_header[5:].strip()
+        if not token:
+            raise HTTPException(status_code=401, detail="Missing sync token")
+        from backend.dependencies.auth_deps import get_db
+        from backend.models.database import User
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.sync_token == token).first()
+        finally:
+            db.close()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid sync token")
+        return {
+            "id": user.telegram_id,
+            "first_name": user.first_name,
+            "last_name": user.last_name or "",
+            "username": user.username or "",
+        }
+
     if auth_header.startswith("dev "):
         # Dev auth requires explicit opt-in AND a non-production environment.
         # Bot token presence alone no longer disables it so browser testing works
@@ -90,3 +112,8 @@ async def get_current_user(request: Request) -> dict:
             raise HTTPException(status_code=401, detail="Invalid dev auth payload")
 
     raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+
+
+def generate_sync_token() -> str:
+    """Generate a cryptographically random 32-byte hex sync token."""
+    return secrets.token_hex(32)

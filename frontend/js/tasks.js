@@ -239,6 +239,8 @@ async function loadHealthTracker() {
   } catch (e) {
     console.error('Health tracker load error:', e);
   }
+  // Load readiness independently — non-fatal
+  loadReadinessCard().catch(() => {});
 }
 
 function renderHealthTracker() {
@@ -247,6 +249,15 @@ function renderHealthTracker() {
 
   document.getElementById('healthSleep').textContent = healthData.sleep_hours > 0 ? `${healthData.sleep_hours}h` : '--';
   document.getElementById('sleepBar').style.width = `${Math.min(100, (healthData.sleep_hours / 9) * 100)}%`;
+
+  // Sleep score badge
+  const badge = document.getElementById('sleepScoreBadge');
+  if (badge && healthData.sleep_score != null && healthData.sleep_score > 0) {
+    badge.textContent = `${Math.round(healthData.sleep_score)}`;
+    badge.style.display = 'inline';
+  } else if (badge) {
+    badge.style.display = 'none';
+  }
 
   document.getElementById('healthSteps').textContent = healthData.steps > 0 ? healthData.steps.toLocaleString() : '--';
   document.getElementById('stepsBar').style.width = `${Math.min(100, (healthData.steps / 10000) * 100)}%`;
@@ -279,7 +290,13 @@ function promptSleep() {
   if (isNaN(hrs) || hrs < 0 || hrs > 24) return;
   healthData.sleep_hours = hrs;
   renderHealthTracker();
-  API.updateHealth({ sleep_hours: hrs });
+  API.updateHealth({ sleep_hours: hrs }).then(updated => {
+    if (updated) {
+      healthData = { ...healthData, ...updated };
+      renderHealthTracker();
+      loadReadinessCard().catch(() => {});
+    }
+  });
 }
 
 function promptSteps() {
@@ -826,4 +843,84 @@ async function _confirmWalk(taskId) {
   const mins = parseInt(input?.value || '0', 10);
   const payload = mins > 0 ? { task_id: taskId, duration_min: mins } : undefined;
   await toggleTask(taskId, payload);
+}
+
+// ─── READINESS CARD ────────────────────────────────────────────────────────
+
+async function loadReadinessCard() {
+  const card = document.getElementById('readinessCard');
+  if (!card) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const data = await API.getReadiness(today);
+  if (!data || data.score == null) return;
+
+  const score = Math.round(data.score);
+  const badge = document.getElementById('readinessBadge');
+  const fill  = document.getElementById('readinessBarFill');
+  const comps = document.getElementById('readinessComponents');
+
+  // Color by zone
+  const color = score >= 70 ? 'var(--green)' : score >= 45 ? 'var(--orange)' : 'var(--red, #FF3B30)';
+  const label = score >= 70 ? 'Ready' : score >= 45 ? 'Moderate' : 'Rest day';
+
+  badge.textContent = `${score}/100`;
+  badge.style.color = color;
+  fill.style.width  = `${score}%`;
+  fill.style.background = color;
+
+  // Component chips
+  const breakdown = data.breakdown || {};
+  const chipData = [
+    { key: 'sleep', label: 'Sleep', icon: '🌙' },
+    { key: 'hrv',   label: 'HRV',   icon: '💓' },
+    { key: 'rhr',   label: 'HR',    icon: '❤️' },
+    { key: 'mood',  label: 'Mood',  icon: '😊' },
+  ];
+  comps.innerHTML = chipData
+    .filter(c => breakdown[c.key] != null)
+    .map(c => {
+      const v = Math.round(breakdown[c.key]);
+      const bg = v >= 70 ? '#1a3a1a' : v >= 45 ? '#3a2a00' : '#3a1010';
+      const tc = v >= 70 ? 'var(--green)' : v >= 45 ? 'var(--orange)' : '#FF6B6B';
+      return `<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:${bg};color:${tc}">${c.icon} ${c.label} ${v}</span>`;
+    }).join('');
+
+  card.style.display = 'block';
+}
+
+// ─── FOOD PHOTO IDENTIFICATION ─────────────────────────────────────────────
+
+function openFoodPhotoCapture() {
+  document.getElementById('foodPhotoInput')?.click();
+}
+
+async function handleFoodPhotoChange(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+
+  showToast('Identifying food…');
+  try {
+    const result = await API.identifyFoodPhoto(file);
+    const foods = result?.foods || [];
+    if (!foods.length) { showToast('Could not identify any food'); return; }
+
+    // Pre-fill the food search modal with the best-confidence item,
+    // queue remaining items as suggestions in the add-food modal.
+    if (typeof openFoodSearch === 'function') openFoodSearch();
+    // Short delay so modal opens, then populate the search box
+    setTimeout(() => {
+      const q = document.getElementById('foodSearchInput');
+      if (q && foods[0]) {
+        q.value = foods[0].matched_food_name || foods[0].name;
+        q.dispatchEvent(new Event('input'));
+      }
+    }, 300);
+
+    if (foods.length > 1) {
+      showToast(`Found ${foods.length} items — showing first`);
+    }
+  } catch (e) {
+    showToast(e.message === 'pro_required' ? 'Pro required for food photos' : 'Photo scan failed');
+  }
+  input.value = '';
 }

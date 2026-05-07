@@ -26,6 +26,7 @@ from backend.models.database import (
     CoachMessage, DailyTask, ExerciseWeightLog, User,
 )
 from backend.rate_limit import check_rate_limit
+from backend.services.pubmed_service import is_advice_query, fetch_abstracts, build_research_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/coach", tags=["coach"])
@@ -157,7 +158,7 @@ def _safe_fallback(flagged_injury: bool) -> str:
     )
 
 
-def _build_user_message(user: User, body: str, flagged_injury: bool) -> str:
+def _build_user_message(user: User, body: str, flagged_injury: bool, research_context: str = "") -> str:
     reg = user.registration_data_json or {}
     context_lines = [
         f"experience: {reg.get('experience_level', 'beginner')}",
@@ -167,7 +168,8 @@ def _build_user_message(user: User, body: str, flagged_injury: bool) -> str:
     if flagged_injury:
         context_lines.append("This message mentions pain or injury — be cautious and direct.")
     ctx = " | ".join(context_lines)
-    return f"[user context: {ctx}]\n\n{body}"
+    prefix = f"{research_context}\n\n" if research_context else ""
+    return f"{prefix}[user context: {ctx}]\n\n{body}"
 
 
 def _try_anthropic(prompt: str) -> str | None:
@@ -265,9 +267,9 @@ def _try_gemini(prompt: str) -> str | None:
         return None
 
 
-def _claude_reply(user: User, body: str, flagged_injury: bool) -> str:
+def _claude_reply(user: User, body: str, flagged_injury: bool, research_context: str = "") -> str:
     """Try Anthropic → OpenRouter → Gemini → templated fallback."""
-    prompt = _build_user_message(user, body, flagged_injury)
+    prompt = _build_user_message(user, body, flagged_injury, research_context)
     for provider in (_try_openrouter, _try_anthropic, _try_gemini):
         reply = provider(prompt)
         if reply:
@@ -294,6 +296,12 @@ async def post_message(
     body = payload.body.strip()
     flagged = bool(INJURY_RE.search(body))
 
+    # Fetch PubMed citations for advice queries (non-blocking, falls back to [])
+    abstracts = []
+    if is_advice_query(body):
+        abstracts = await fetch_abstracts(body, max_results=3)
+    research_context = build_research_context(abstracts)
+
     user_msg = CoachMessage(
         user_id=user.id, role="user", body=body, flagged_injury=flagged,
     )
@@ -301,7 +309,7 @@ async def post_message(
     db.commit()
     db.refresh(user_msg)
 
-    reply_text = _claude_reply(user, body, flagged)
+    reply_text = _claude_reply(user, body, flagged, research_context)
 
     assistant_msg = CoachMessage(
         user_id=user.id, role="assistant", body=reply_text, flagged_injury=False,
@@ -309,6 +317,8 @@ async def post_message(
     db.add(assistant_msg)
     db.commit()
     db.refresh(assistant_msg)
+
+    papers = [{"pmid": a["pmid"], "url": a["url"]} for a in abstracts]
 
     return {
         "user_message": {
@@ -320,6 +330,7 @@ async def post_message(
             "id": assistant_msg.id, "role": "assistant", "body": reply_text,
             "flagged_injury": False,
             "created_at": assistant_msg.created_at.isoformat() if assistant_msg.created_at else None,
+            "papers": papers if papers else None,
         },
     }
 

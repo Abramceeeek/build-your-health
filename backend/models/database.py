@@ -36,6 +36,9 @@ class User(Base):
     registration_data_json = Column(JSON, default=None)
     face_transform_subscribed = Column(Boolean, default=False)
     memory_json = Column(JSON, default=None)
+    sex = Column(String(10), default=None)          # "male" | "female" — backfilled from registration_data_json
+    date_of_birth = Column(String(10), default=None)  # YYYY-MM-DD
+    sync_token = Column(String(64), default=None, unique=True)  # stable token for Apple Watch Shortcut auth
 
     photos = relationship("UserPhoto", back_populates="user", cascade="all, delete-orphan")
     plans = relationship("UserPlan", back_populates="user", cascade="all, delete-orphan")
@@ -53,6 +56,9 @@ class User(Base):
     exercise_sessions = relationship("ExerciseSession", back_populates="user", cascade="all, delete-orphan")
     supplement_logs = relationship("SupplementLog", back_populates="user", cascade="all, delete-orphan")
     reminders = relationship("UserReminder", back_populates="user", cascade="all, delete-orphan")
+    readiness_scores = relationship("ReadinessScore", back_populates="user", cascade="all, delete-orphan")
+    volume_logs = relationship("VolumeLoadLog", back_populates="user", cascade="all, delete-orphan")
+    cycle_logs = relationship("CycleLog", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserPhoto(Base):
@@ -215,6 +221,13 @@ class DailyHealthLog(Base):
     floors_climbed = Column(Integer, default=0)
     wearable_source = Column(String(30), default="")  # apple_watch|fitbit|samsung|manual
     exercise_calories = Column(Integer, default=0)  # auto-calculated from exercise sessions
+    # Sleep quality fields (auto-calculated from wearable or manual input)
+    sleep_score = Column(Float, default=None)         # 0–100 composite sleep quality
+    sleep_deep_pct = Column(Float, default=None)      # fraction deep sleep (0.0–1.0)
+    sleep_rem_pct = Column(Float, default=None)       # fraction REM sleep (0.0–1.0)
+    sleep_bedtime = Column(String(5), default=None)   # "HH:MM" bedtime
+    hrv = Column(Float, default=None)                 # HRV RMSSD ms (from wearable)
+    vo2max = Column(Float, default=None)              # ml/kg/min from wearable or HUNT estimate
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
 
     user = relationship("User", back_populates="health_logs")
@@ -489,6 +502,64 @@ class CoachMessage(Base):
 
     __table_args__ = (
         Index("ix_coach_messages_user_created", "user_id", "created_at"),
+    )
+
+
+class ReadinessScore(Base):
+    """Daily composite readiness/recovery score (0–100) computed from health log data."""
+    __tablename__ = "readiness_scores"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    date = Column(String(10), nullable=False)
+    score = Column(Float, nullable=False)             # overall 0–100
+    sleep_score = Column(Float, default=0)            # component
+    rhr_score = Column(Float, default=0)              # component
+    hrv_score = Column(Float, default=0)              # component
+    mood_score = Column(Float, default=0)             # component
+    breakdown_json = Column(JSON, default=None)       # {"sleep": 72, "rhr": 68, ...}
+    computed_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User", back_populates="readiness_scores")
+
+    __table_args__ = (
+        Index("ix_readiness_user_date", "user_id", "date", unique=True),
+    )
+
+
+class VolumeLoadLog(Base):
+    """Weekly volume load per muscle group — used for deload detection."""
+    __tablename__ = "volume_load_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    week_start = Column(String(10), nullable=False)   # Monday of the week
+    muscle_group = Column(String(20), nullable=False) # PUSH | PULL | LEGS | CORE
+    total_load = Column(Float, default=0)             # Σ sets×reps×weight_kg
+    session_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    user = relationship("User", back_populates="volume_logs")
+
+    __table_args__ = (
+        Index("ix_volume_user_week_muscle", "user_id", "week_start", "muscle_group", unique=True),
+    )
+
+
+class CycleLog(Base):
+    """Menstrual cycle tracking — gated to users with sex == 'female'."""
+    __tablename__ = "cycle_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    last_period_start = Column(String(10), nullable=False)  # YYYY-MM-DD
+    cycle_length = Column(Integer, default=28)              # days
+    logged_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User", back_populates="cycle_logs")
+
+    __table_args__ = (
+        Index("ix_cycle_logs_user", "user_id"),
     )
 
 

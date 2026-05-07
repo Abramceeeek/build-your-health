@@ -101,10 +101,6 @@
     <span class="menu-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
     <span class="menu-item-label">Coach</span>
   </button>
-  <button class="menu-item" data-page="compete" onclick="menuNavigate('compete')">
-    <span class="menu-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg></span>
-    <span class="menu-item-label">Compete</span>
-  </button>
   <button class="menu-item" onclick="if(typeof FeedbackModule!=='undefined'){closeMenu();FeedbackModule.open(document.querySelector('.page.active')?.id||'app');}">
     <span class="menu-item-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
     <span class="menu-item-label">Send feedback</span>
@@ -196,7 +192,7 @@
           <div class="health-item" onclick="promptSleep()">
             <div class="health-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></div>
             <div class="health-value" id="healthSleep">--</div>
-            <div class="health-label">Sleep</div>
+            <div class="health-label">Sleep <span id="sleepScoreBadge" style="display:none;font-size:9px;background:var(--purple);color:#fff;border-radius:4px;padding:1px 4px;margin-left:2px;vertical-align:middle"></span></div>
             <div class="health-bar-track"><div class="health-bar-fill" id="sleepBar" style="width:0%;background:var(--purple)"></div></div>
           </div>
           <div class="health-item" onclick="promptSteps()">
@@ -214,6 +210,18 @@
       </div>
     </div>
 
+    <!-- Readiness Score Card -->
+    <div id="readinessCard" style="display:none" class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="section-title" style="margin:0;font-size:13px">Recovery Readiness</span>
+        <div id="readinessBadge" style="font-size:22px;font-weight:700;letter-spacing:-0.5px">--</div>
+      </div>
+      <div id="readinessBar" style="margin-top:6px;height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden">
+        <div id="readinessBarFill" style="height:100%;width:0%;border-radius:3px;transition:width 0.8s ease;background:var(--green)"></div>
+      </div>
+      <div id="readinessComponents" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"></div>
+    </div>
+
     <!-- Burn Summary Card (wearable + exercise) -->
     <div id="burnSummaryCard"></div>
 
@@ -229,8 +237,13 @@
     <div class="card" id="nutritionSummaryCard">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="section-title" style="margin:0">Today's Nutrition</div>
-        <button class="btn-small" onclick="openFoodSearch()">+ Add Food</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn-small" onclick="openFoodPhotoCapture()" title="Identify food from photo" style="padding:5px 8px">📷</button>
+          <button class="btn-small" onclick="openFoodSearch()">+ Add Food</button>
+        </div>
       </div>
+      <!-- Hidden file input for food photo -->
+      <input type="file" id="foodPhotoInput" accept="image/*" capture="environment" style="display:none" onchange="handleFoodPhotoChange(this)">
       <div class="nutrition-rings" id="nutritionRings">
         <div class="nutrition-ring-item">
           <div class="nutrition-ring-value" id="nutCalVal">0</div>
@@ -399,61 +412,6 @@
 </div>
 
 <!-- PAGE: COMPETE -->
-<div id="pageCompete" class="page">
-  <div class="main-content">
-    <div class="ovr-card">
-      <div class="ovr-ring">
-        <canvas id="ovrCanvas" width="80" height="80"></canvas>
-        <div class="ovr-number" id="ovrNumber">0</div>
-      </div>
-      <div class="ovr-info">
-        <div class="ovr-label">Overall Rating</div>
-        <div class="ovr-tier" id="ovrTier">Bronze</div>
-        <div class="ovr-xp" id="ovrXp">0 XP  ·  Level 1</div>
-      </div>
-    </div>
-
-    <div class="section-header">
-      <div class="section-title">My Competitions</div>
-      <div class="section-line"></div>
-    </div>
-    <div id="competitionsList"></div>
-
-    <div class="compete-pitch">
-      <div class="compete-pitch-title">Challenge a friend 🏆</div>
-      <div class="compete-pitch-body">See who transforms faster. Invite anyone with Telegram.</div>
-      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="shareCompeteInvite()">Share invite</button>
-    </div>
-    <div style="display:flex;gap:10px;margin:12px 0">
-      <button class="btn btn-primary" style="flex:1" onclick="showCreateComp()">Create</button>
-      <button class="btn btn-outline" style="flex:1" onclick="showJoinComp()">Join</button>
-    </div>
-
-    <div class="section-header">
-      <div class="section-title">Leaderboard</div>
-      <div class="section-line"></div>
-    </div>
-    <div class="lb-card" id="leaderboardList">
-      <div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:13px">
-        Create or join a competition to see rankings
-      </div>
-    </div>
-
-    <div id="highlightsSection" style="display:none;margin-top:12px">
-      <div class="section-header">
-        <div class="section-title">Highlights</div>
-        <div class="section-line"></div>
-      </div>
-      <div class="highlights-grid" id="highlightsList"></div>
-    </div>
-
-    <div class="week-chart">
-      <div class="week-chart-title">Your Week</div>
-      <div class="week-bars" id="compWeekBars"></div>
-    </div>
-  </div>
-</div>
-
 <!-- PAGE: PROGRESS -->
 <div id="pageProgress" class="page">
   <div class="main-content">
@@ -662,6 +620,70 @@
       </div>
     </div>
     <div id="progressTimeline" style="margin-top:8px"></div>
+
+    <!-- Biological Age Card -->
+    <div id="bioAgeCard" class="action-card" style="margin-top:16px;display:none">
+      <div class="action-card-icon" style="background:rgba(175,82,222,0.15);color:#AF52DE">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <div class="action-card-content" style="flex:1">
+        <div class="action-card-title">Biological Age</div>
+        <div class="action-card-sub" id="bioAgeSub">Calculating…</div>
+      </div>
+      <div id="bioAgeBadge" style="font-size:22px;font-weight:700;color:#AF52DE;min-width:36px;text-align:right"></div>
+    </div>
+
+    <!-- OVR + Competitions (moved from Compete tab) -->
+    <div class="ovr-card" style="margin-top:16px">
+      <div class="ovr-ring">
+        <canvas id="ovrCanvas" width="80" height="80"></canvas>
+        <div class="ovr-number" id="ovrNumber">0</div>
+      </div>
+      <div class="ovr-info">
+        <div class="ovr-label">Overall Rating</div>
+        <div class="ovr-tier" id="ovrTier">Bronze</div>
+        <div class="ovr-xp" id="ovrXp">0 XP  ·  Level 1</div>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top:16px">
+      <div class="section-title">Competitions</div>
+      <div class="section-line"></div>
+    </div>
+    <div id="competitionsList"></div>
+
+    <div class="compete-pitch">
+      <div class="compete-pitch-title">Challenge a friend 🏆</div>
+      <div class="compete-pitch-body">See who transforms faster. Invite anyone with Telegram.</div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="shareCompeteInvite()">Share invite</button>
+    </div>
+    <div style="display:flex;gap:10px;margin:12px 0">
+      <button class="btn btn-primary" style="flex:1" onclick="showCreateComp()">Create</button>
+      <button class="btn btn-outline" style="flex:1" onclick="showJoinComp()">Join</button>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Leaderboard</div>
+      <div class="section-line"></div>
+    </div>
+    <div class="lb-card" id="leaderboardList">
+      <div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:13px">
+        Create or join a competition to see rankings
+      </div>
+    </div>
+
+    <div id="highlightsSection" style="display:none;margin-top:12px">
+      <div class="section-header">
+        <div class="section-title">Highlights</div>
+        <div class="section-line"></div>
+      </div>
+      <div class="highlights-grid" id="highlightsList"></div>
+    </div>
+
+    <div class="week-chart" style="margin-top:12px">
+      <div class="week-chart-title">Your Week</div>
+      <div class="week-bars" id="compWeekBars"></div>
+    </div>
   </div>
 </div>
 
@@ -857,6 +879,38 @@
         <button class="btn btn-green" style="margin-top:24px;width:100%" onclick="saveSettings()">Save &amp; Regenerate Tasks</button>
         <button class="btn" style="margin-top:10px;width:100%;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-secondary)" onclick="FeedbackModule.open('settings')">Send Feedback</button>
       </div>
+    </div>
+
+    <!-- Apple Watch Connect Card -->
+    <div class="card" style="margin-top:16px" id="appleWatchCard">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:rgba(0,122,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="3" ry="3"/><path d="M12 18h.01"/></svg>
+        </div>
+        <div>
+          <div style="font-weight:600;font-size:14px">Connect Apple Watch</div>
+          <div style="font-size:12px;color:var(--text-tertiary)">Auto-sync HRV, sleep & activity</div>
+        </div>
+      </div>
+      <div id="syncTokenBox" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px">Your sync token (paste into Shortcut):</div>
+        <div style="background:var(--bg-tertiary);border-radius:8px;padding:8px 10px;font-family:monospace;font-size:11px;word-break:break-all;color:var(--text-primary)" id="syncTokenValue"></div>
+      </div>
+      <button class="btn" style="width:100%;background:var(--bg-tertiary);border:1px solid var(--border);color:var(--text-primary);font-size:13px" onclick="loadShortcutToken()">Show Sync Token</button>
+      <div style="font-size:11px;color:var(--text-tertiary);margin-top:8px;line-height:1.5">
+        Paste the token into the iOS Shortcut. See <span style="color:var(--accent)" onclick="openWatchSetupGuide()">setup guide</span>.
+      </div>
+    </div>
+
+    <!-- Cycle Tracking Card (female only) -->
+    <div class="card" id="cycleTrackingCard" style="margin-top:16px;display:none">
+      <div style="font-weight:600;font-size:14px;margin-bottom:8px">Cycle Tracking</div>
+      <div id="cyclePhaseInfo" style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Loading…</div>
+      <label class="input-label">Last period start</label>
+      <input type="date" id="cycleLPS" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+      <label class="input-label" style="margin-top:10px">Cycle length (days)</label>
+      <input type="number" id="cycleLen" value="28" min="21" max="40" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-tertiary);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+      <button class="btn btn-green" style="width:100%;margin-top:12px" onclick="saveCycleLog()">Save Cycle Data</button>
     </div>
 
     <!-- Reminders Section -->
@@ -1365,6 +1419,115 @@ async function subscribeFaceTransform() {
     <div id="mealSuggestResults"></div>
   </div>
 </div>
+
+<script>
+// ─── PUBMED LINKS ────────────────────────────────────────────────────────────
+function openPubMedLink(url) {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.openLink) tg.openLink(url);
+  else window.open(url, '_blank', 'noopener');
+}
+
+// ─── BIO AGE ────────────────────────────────────────────────────────────────
+async function loadBioAge() {
+  const card = document.getElementById('bioAgeCard');
+  const badge = document.getElementById('bioAgeBadge');
+  const sub = document.getElementById('bioAgeSub');
+  if (!card) return;
+  try {
+    const d = await API.getBioAge();
+    badge.textContent = d.bio_age;
+    const delta = d.delta;
+    const sign = delta <= 0 ? '−' : '+';
+    const abs = Math.abs(delta).toFixed(1);
+    const color = delta <= -1 ? '#34C759' : delta >= 1 ? '#FF3B30' : '#FF9500';
+    sub.innerHTML = `Chrono age: ${d.chronological_age} · <span style="color:${color}">${sign}${abs} yrs</span>`;
+    badge.style.color = color;
+    card.style.display = 'flex';
+  } catch (e) {
+    // No data yet — hide card silently
+  }
+}
+
+// ─── APPLE WATCH ─────────────────────────────────────────────────────────────
+async function loadShortcutToken() {
+  const box = document.getElementById('syncTokenBox');
+  const val = document.getElementById('syncTokenValue');
+  try {
+    const d = await API.getShortcutToken();
+    val.textContent = d.sync_token;
+    box.style.display = 'block';
+    // Copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(d.sync_token).catch(() => {});
+    }
+    showToast('Token copied to clipboard');
+  } catch (e) {
+    showToast('Could not load token', 'error');
+  }
+}
+
+function openWatchSetupGuide() {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg && tg.openLink) {
+    tg.openLink('https://github.com/yourdomain/build-your-health/blob/main/scripts/apple_shortcut/README.md');
+  }
+}
+
+// ─── CYCLE TRACKING ──────────────────────────────────────────────────────────
+async function loadCycleSection(sex) {
+  const card = document.getElementById('cycleTrackingCard');
+  if (!card) return;
+  if (!sex || sex.toLowerCase() !== 'female') {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  try {
+    const phase = await API.getCyclePhase();
+    const el = document.getElementById('cyclePhaseInfo');
+    if (!el) return;
+    if (!phase.phase) {
+      el.textContent = 'Log your last period start below to enable cycle-aware coaching.';
+    } else {
+      const PHASE_EMOJI = { menstrual: '🔴', follicular: '🟢', ovulatory: '⚡', luteal: '🌙' };
+      el.innerHTML = `${PHASE_EMOJI[phase.phase] || ''} Day ${phase.day_of_cycle} · <strong>${phase.phase.charAt(0).toUpperCase() + phase.phase.slice(1)}</strong> · Next period ${phase.next_period}`;
+    }
+  } catch (e) {}
+}
+
+async function saveCycleLog() {
+  const lps = document.getElementById('cycleLPS').value;
+  const len = parseInt(document.getElementById('cycleLen').value) || 28;
+  if (!lps) { showToast('Enter your last period start date', 'error'); return; }
+  try {
+    await API.logPeriod({ last_period_start: lps, cycle_length: len });
+    showToast('Cycle data saved');
+    await loadCycleSection('female');
+  } catch (e) {
+    showToast(e.message || 'Could not save', 'error');
+  }
+}
+
+// ─── PAGE INIT HOOKS ─────────────────────────────────────────────────────────
+// Extend switchPage to init bio age on Progress and cycle/watch on Settings
+(function () {
+  const _orig = window.switchPage;
+  if (typeof _orig !== 'function') return;
+  window.switchPage = function (page) {
+    _orig(page);
+    if (page === 'progress') {
+      loadBioAge();
+    }
+    if (page === 'settings') {
+      // Load sex from registration data to gate cycle section
+      API.getRegistration().then(reg => {
+        loadCycleSection(reg && reg.gender);
+      }).catch(() => {});
+    }
+  };
+})();
+</script>
 
 </body>
 </html>

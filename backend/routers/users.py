@@ -12,7 +12,7 @@ from backend.models.database import UserPhoto, UserMetrics, NutritionTarget
 from backend.services.nutrition_targets import compute_targets
 from backend.models.schemas import (
     UserResponse, UserStats, PhotoResponse,
-    RegistrationRequest, RegistrationStatusResponse,
+    RegistrationRequest, RegistrationStatusResponse, BioAgeOut,
 )
 from backend.rate_limit import check_rate_limit
 
@@ -149,6 +149,38 @@ async def get_my_photos(
         UserPhoto.user_id == user.id
     ).order_by(UserPhoto.uploaded_at.desc()).all()
     return photos
+
+
+@router.get("/me/shortcut-token")
+async def get_shortcut_token(
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return (or generate) a stable sync token for the Apple Watch Shortcut."""
+    from backend.auth import generate_sync_token
+    from backend.models.database import User
+    user = get_or_create_user(db, tg_user)
+    if not user.sync_token:
+        user.sync_token = generate_sync_token()
+        db.commit()
+    return {"sync_token": user.sync_token}
+
+
+@router.get("/me/bio-age", response_model=BioAgeOut)
+async def get_bio_age(
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Compute biological age from VO2max, activity, body composition, and recovery."""
+    from backend.services.bio_age_service import compute_bio_age
+    user = get_or_create_user(db, tg_user)
+    result = compute_bio_age(user, db)
+    if result is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Add your date of birth and weight/height to get your biological age.",
+        )
+    return result
 
 
 @router.get("/me/registration-status", response_model=RegistrationStatusResponse)

@@ -317,6 +317,47 @@ class WeightLogResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# --- Readiness ---
+
+class ReadinessScoreOut(BaseModel):
+    date: str
+    score: float
+    sleep_score: float
+    rhr_score: float
+    hrv_score: float
+    mood_score: float
+    breakdown: dict
+
+
+# --- Food Photo Identification ---
+
+class FoodIdentificationItem(BaseModel):
+    name: str
+    estimated_grams: float
+    confidence: float
+    calories: float = 0
+    protein_g: float = 0
+    carbs_g: float = 0
+    fat_g: float = 0
+    fibre_g: float = 0
+
+
+class FoodIdentificationResponse(BaseModel):
+    foods: list[FoodIdentificationItem]
+
+
+# --- Biological Age ---
+
+class BioAgeOut(BaseModel):
+    bio_age: float
+    chronological_age: int
+    delta: float
+    composite_score: float
+    components: dict
+    vo2max_used: Optional[float] = None
+    data_completeness: str = "low"
+
+
 # --- Badges ---
 
 class BadgeResponse(BaseModel):

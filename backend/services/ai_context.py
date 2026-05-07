@@ -6,6 +6,7 @@ from datetime import datetime, timezone, timedelta
 
 from backend.models.database import (
     NutritionLog, ExerciseWeightLog, DailyTask, UserMetrics, User,
+    ReadinessScore,
 )
 
 
@@ -116,6 +117,36 @@ def build_ai_context(db: Session, user_id: int) -> str:
             if parts:
                 lines.append(f"  {date_str}: {', '.join(parts)}")
         sections.append("\n".join(lines))
+
+    # ─── READINESS SCORES (last 7 days) ──────────────────────────────────
+    readiness_rows = db.query(ReadinessScore).filter(
+        ReadinessScore.user_id == user_id,
+        ReadinessScore.date >= week_ago,
+        ReadinessScore.date <= today_str,
+    ).order_by(ReadinessScore.date.desc()).all()
+
+    if readiness_rows:
+        avg_readiness = sum(r.score for r in readiness_rows) / len(readiness_rows)
+        latest = readiness_rows[0]
+        lines = [f"READINESS SCORES (last 7 days, avg {avg_readiness:.0f}/100):"]
+        for r in reversed(readiness_rows):
+            lines.append(f"  {r.date}: {r.score:.0f}/100")
+        sections.append("\n".join(lines))
+
+        # Deload check
+        from backend.services.volume_service import check_deload_needed
+        deload_needed = check_deload_needed(db, user_id)
+        low_readiness = avg_readiness < 50
+        if deload_needed or low_readiness:
+            reason = []
+            if deload_needed:
+                reason.append("weekly volume exceeds 115% of 3-week average")
+            if low_readiness:
+                reason.append(f"average readiness is low ({avg_readiness:.0f}/100)")
+            sections.append(
+                f"DELOAD RECOMMENDED: {'; '.join(reason)}. "
+                "Reduce volume by 40–50% this week, lower intensity to 60% of normal."
+            )
 
     if not sections:
         return "No historical user data available yet."

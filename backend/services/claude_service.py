@@ -270,6 +270,48 @@ def _mock_analysis() -> dict:
     }
 
 
+async def identify_food_from_image(image_bytes: bytes, media_type: str = "image/jpeg") -> list:
+    """Use Claude vision to identify foods in a photo and estimate portions.
+
+    Returns list of {name, estimated_grams, confidence}.
+    """
+    settings = get_settings()
+    if not settings.anthropic_api_key:
+        return []
+
+    data = base64.standard_b64encode(image_bytes).decode("utf-8")
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        system=(
+            "You are a nutrition assistant. Identify all visible foods in the photo "
+            "and estimate their weight. Return ONLY valid JSON with this structure:\n"
+            '{"foods": [{"name": "food name", "estimated_grams": 150, "confidence": 0.9}]}\n'
+            "Use common food names. Confidence: 0.0–1.0. No extra text."
+        ),
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}},
+                {"type": "text", "text": "Identify the foods and estimate portion weights in grams."},
+            ],
+        }],
+    )
+
+    response_text = message.content[0].text
+    try:
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+        parsed = json.loads(response_text.strip())
+        return parsed.get("foods", [])
+    except (json.JSONDecodeError, KeyError):
+        return []
+
+
 def _mock_plan() -> dict:
     """Return a default plan when no API key is configured."""
     return {
