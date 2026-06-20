@@ -3,7 +3,10 @@ import hmac
 import json
 import secrets
 import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote, parse_qs
+
+import jwt
 from fastapi import Request, HTTPException, Depends
 from backend.config import get_settings
 
@@ -11,6 +14,75 @@ from backend.config import get_settings
 # Reject initData older than this. Telegram recommends a small window to
 # prevent captured-token replay; 24h is generous enough for normal use.
 INIT_DATA_MAX_AGE_S = 24 * 60 * 60
+
+# Account (email/password) JWT settings.
+JWT_ALG = "HS256"
+ACCESS_TTL = timedelta(minutes=30)
+REFRESH_TTL = timedelta(days=30)
+_DEV_JWT_SECRET = "dev-insecure-jwt-secret-change-me"  # only used when env != production
+
+
+def _jwt_secret() -> str:
+    settings = get_settings()
+    if settings.jwt_secret:
+        return settings.jwt_secret
+    if settings.environment == "production":
+        raise HTTPException(status_code=503, detail="Server misconfigured: jwt_secret not set")
+    return _DEV_JWT_SECRET
+
+
+# --- Password hashing (scrypt, stdlib — no native build needed) ---------------
+
+def hash_password(password: str) -> str:
+    """scrypt hash as 'scrypt$<n>$<r>$<p>$<salt_hex>$<hash_hex>'."""
+    n, r, p = 2 ** 14, 8, 1
+    salt = secrets.token_bytes(16)
+    dk = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=n, r=r, p=p, dklen=32)
+    return f"scrypt${n}${r}${p}${salt.hex()}${dk.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        scheme, n, r, p, salt_hex, hash_hex = stored.split("$")
+        if scheme != "scrypt":
+            return False
+        dk = hashlib.scrypt(
+            password.encode("utf-8"), salt=bytes.fromhex(salt_hex),
+            n=int(n), r=int(r), p=int(p), dklen=len(hash_hex) // 2,
+        )
+        return hmac.compare_digest(dk.hex(), hash_hex)
+    except (ValueError, AttributeError):
+        return False
+
+
+# --- JWT access / refresh tokens ----------------------------------------------
+
+def _make_token(account_id: int, token_type: str, ttl: timedelta) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {"sub": str(account_id), "type": token_type, "iat": now, "exp": now + ttl}
+    return jwt.encode(payload, _jwt_secret(), algorithm=JWT_ALG)
+
+
+def create_access_token(account_id: int) -> str:
+    return _make_token(account_id, "access", ACCESS_TTL)
+
+
+def create_refresh_token(account_id: int) -> str:
+    return _make_token(account_id, "refresh", REFRESH_TTL)
+
+
+def decode_token(token: str, expected_type: str) -> int:
+    """Return the account id from a valid token of expected_type, else raise 401."""
+    try:
+        payload = jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALG])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if payload.get("type") != expected_type:
+        raise HTTPException(status_code=401, detail="Wrong token type")
+    try:
+        return int(payload["sub"])
+    except (KeyError, ValueError):
+        raise HTTPException(status_code=401, detail="Malformed token")
 
 
 def validate_telegram_init_data(init_data: str, bot_token: str) -> dict:
@@ -99,6 +171,12 @@ async def get_current_user(request: Request) -> dict:
             "last_name": user.last_name or "",
             "username": user.username or "",
         }
+
+    if auth_header.startswith("Bearer "):
+        # Account (email/password) access token. Resolves to an internal account id;
+        # downstream get_or_create_user maps account_id -> the User row.
+        account_id = decode_token(auth_header[7:].strip(), "access")
+        return {"account_id": account_id}
 
     if auth_header.startswith("dev "):
         # Dev auth requires explicit opt-in AND a non-production environment.

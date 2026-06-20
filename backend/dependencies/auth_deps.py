@@ -19,7 +19,19 @@ def get_db():
 
 
 def get_or_create_user(db: Session, tg_user: dict) -> User:
-    """Fetch existing user or create a new record from Telegram data."""
+    """Resolve the request's User row.
+
+    Account (email/password) requests carry `account_id` (the User PK) — look it up
+    directly; the account already exists (created at register). Telegram requests carry
+    `id` (the telegram_id) and are upserted from the Telegram profile.
+    """
+    account_id = tg_user.get("account_id")
+    if account_id is not None:
+        user = db.get(User, account_id)
+        if not user:
+            raise HTTPException(status_code=401, detail="Account not found")
+        return user
+
     telegram_id = tg_user.get("id")
     if not telegram_id:
         raise HTTPException(status_code=400, detail="No telegram user id")

@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     # Auth / environment
     environment: str = "development"  # set to "production" in prod .env
+    jwt_secret: str = ""              # HMAC secret for account (email/password) JWTs; required in prod
     dev_auth_enabled: bool = True     # set False in prod; auto-disabled when telegram_bot_token is set
     feedback_channel_id: str = ""     # Telegram chat_id to receive feedback messages
     feedback_admin_chat_id: str = ""  # Telegram chat_id for admin feedback forwarding (group or person)
