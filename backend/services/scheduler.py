@@ -16,11 +16,37 @@ from backend.models.database import (
 from backend.services.claude_service import generate_plan
 from backend.services.plan_generator import create_tasks_from_plan
 from backend.services.notification_service import notify_plan_ready
+from backend.services.time_service import user_local_now, user_today_str
 from backend.models.database import UserPlan
 
 logger = logging.getLogger(__name__)
 
 scheduler = AsyncIOScheduler()
+
+
+def _due_now(user, job_id: str, target_hour: int) -> bool:
+    """True when it is the user's local target_hour and this nudge hasn't fired today (local).
+
+    Read-only — does NOT record anything. Lets the daily nudges run hourly and act when it is
+    e.g. 08:00 in EACH user's own timezone instead of one fixed UTC instant. Because the job
+    scans at minute 0 of every UTC hour, a fixed offset's local hour cycles through all 24
+    values once per day, so every target hour is hit exactly once daily — including half-hour
+    offsets (a UTC+5:30 user fires at their 08:30). Pair with _mark_sent AFTER a successful
+    send so a delivery failure never burns the day's slot (no silent missed nudge) and an
+    APScheduler misfire re-run within the hour can't double-send.
+    """
+    now_local = user_local_now(user)
+    if now_local.hour != target_hour:
+        return False
+    return (user.nudge_log_json or {}).get(job_id) != now_local.strftime("%Y-%m-%d")
+
+
+def _mark_sent(db, user, job_id: str):
+    """Record that job_id fired for this user on their local day. Call AFTER a successful send."""
+    log = dict(user.nudge_log_json or {})
+    log[job_id] = user_today_str(user)
+    user.nudge_log_json = log
+    db.commit()
 
 
 def start_scheduler():
@@ -47,34 +73,33 @@ def start_scheduler():
         replace_existing=True,
     )
 
-    # Daily at 08:00 UTC — morning reminder with streak + task count
+    # Day-anchored nudges run hourly and fire at the user's LOCAL target hour (08:00 morning,
+    # 10:00 retention, 19:00 evening, 21:00 end-of-day), deduped once per local day. This makes
+    # them land at the right time of day in every timezone instead of a fixed UTC instant.
     scheduler.add_job(
         send_morning_reminders,
-        CronTrigger(hour=8, minute=0),
+        CronTrigger(minute=0),
         id="morning_reminders",
         replace_existing=True,
     )
 
-    # Daily at 10:00 UTC — check retention milestones (3-week cliff strategy)
     scheduler.add_job(
         check_retention_milestones,
-        CronTrigger(hour=10, minute=0),
+        CronTrigger(minute=0),
         id="retention_milestones",
         replace_existing=True,
     )
 
-    # Daily at 19:00 UTC — check if gym session is unstarted
     scheduler.add_job(
         send_evening_gym_nudges,
-        CronTrigger(hour=19, minute=0),
+        CronTrigger(minute=0),
         id="evening_gym_nudges",
         replace_existing=True,
     )
 
-    # Daily at 21:00 UTC — check if 0 tasks completed today
     scheduler.add_job(
         send_end_of_day_nudges,
-        CronTrigger(hour=21, minute=0),
+        CronTrigger(minute=0),
         id="end_of_day_nudges",
         replace_existing=True,
     )
@@ -436,7 +461,6 @@ async def send_morning_reminders():
     db = SessionLocal()
     try:
         from backend.services.notification_service import notify_morning_reminder
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         users = db.query(User).filter(
             User.is_registered == True,
             User.telegram_id.isnot(None),
@@ -444,6 +468,9 @@ async def send_morning_reminders():
 
         for user in users:
             try:
+                if not _due_now(user, "morning_reminders", 8):
+                    continue  # not 08:00 in the user's timezone yet (or already sent today)
+                today = user_today_str(user)
                 tasks_today = db.query(DailyTask).filter(
                     DailyTask.user_id == user.id,
                     DailyTask.date == today,
@@ -475,6 +502,7 @@ async def send_morning_reminders():
                             ai_message = ai_message.strip().split("\n")[0]
 
                 await notify_morning_reminder(user.telegram_id, user.streak_days, tasks_today, ai_message)
+                _mark_sent(db, user, "morning_reminders")
             except Exception as e:
                 logger.warning("Morning reminder failed for user %s: %s", user.id, e)
     except Exception as e:
@@ -504,6 +532,8 @@ async def check_retention_milestones():
         for user in active_users:
             if not user.created_at:
                 continue
+            if not _due_now(user, "retention_milestones", 10):
+                continue  # not 10:00 in the user's timezone yet (or already checked today)
             days_active = (now - user.created_at).days
 
             # Only check at milestone boundaries (±1 day tolerance)
@@ -512,6 +542,7 @@ async def check_retention_milestones():
             if not is_near_milestone:
                 continue
 
+            _mark_sent(db, user, "retention_milestones")
             # Award badges
             newly_awarded = check_and_award_badges(db, user)
 
@@ -552,10 +583,7 @@ async def send_evening_gym_nudges():
     try:
         from backend.services.notification_service import notify_gym_not_done
         from backend.routers.tasks import _get_user_schedule, _day_index_for_date
-        
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        day_idx = _day_index_for_date(today)
-        
+
         users = db.query(User).filter(
             User.is_registered == True,
             User.telegram_id.isnot(None),
@@ -563,6 +591,10 @@ async def send_evening_gym_nudges():
 
         for user in users:
             try:
+                if not _due_now(user, "evening_gym_nudges", 19):
+                    continue  # not 19:00 in the user's timezone yet (or already nudged today)
+                today = user_today_str(user)
+                day_idx = _day_index_for_date(today)
                 day_types, day_focuses = _get_user_schedule(user, today)
                 if day_types[day_idx] != "gym":
                     continue  # Not a gym day
@@ -579,7 +611,7 @@ async def send_evening_gym_nudges():
                 
                 if completed_gym == 0:
                     await notify_gym_not_done(user.telegram_id, focus)
-                    
+                    _mark_sent(db, user, "evening_gym_nudges")
             except Exception as e:
                 logger.warning("Gym nudge failed for user %s: %s", user.id, e)
     except Exception as e:
@@ -598,8 +630,7 @@ async def send_end_of_day_nudges():
     db = SessionLocal()
     try:
         from backend.services.notification_service import notify_no_activity
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        
+
         users = db.query(User).filter(
             User.is_registered == True,
             User.telegram_id.isnot(None),
@@ -607,16 +638,19 @@ async def send_end_of_day_nudges():
 
         for user in users:
             try:
+                if not _due_now(user, "end_of_day_nudges", 21):
+                    continue  # not 21:00 in the user's timezone yet (or already nudged today)
+                today = user_today_str(user)
                 # Total completed tasks today
                 completed = db.query(DailyTask).filter(
                     DailyTask.user_id == user.id,
                     DailyTask.date == today,
                     DailyTask.completed == True,
                 ).count()
-                
+
                 if completed == 0:
                     await notify_no_activity(user.telegram_id, user.streak_days)
-                    
+                    _mark_sent(db, user, "end_of_day_nudges")
             except Exception as e:
                 logger.warning("End-of-day nudge failed for user %s: %s", user.id, e)
     except Exception as e:
