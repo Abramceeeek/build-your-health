@@ -42,8 +42,69 @@ async function _showTelegramGate() {
   } catch (_) { /* fallback href stays */ }
 }
 
-if (!HAS_TELEGRAM && !IS_LOCAL) {
-  _showTelegramGate();
+// ─── WEB AUTH (email/password) ──────────────────
+// Outside Telegram and not logged in → show the account login/register screen.
+let _webAuthMode = 'login';
+function _showWebAuth() {
+  document.querySelectorAll('.app-header, .side-menu, .menu-overlay, .page, .ob-overlay').forEach(el => {
+    el.style.display = 'none';
+  });
+  const ov = document.getElementById('webAuthOverlay');
+  if (!ov) return;
+  ov.hidden = false;
+
+  fetch('/api/public/config').then(r => r.json()).then(cfg => {
+    if (cfg.bot_username) {
+      const a = document.getElementById('webAuthTelegram');
+      if (a) a.href = `https://t.me/${cfg.bot_username}?startapp=1`;
+    }
+  }).catch(() => {});
+
+  const form = document.getElementById('webAuthForm');
+  const toggle = document.getElementById('webAuthToggle');
+  const errEl = document.getElementById('webAuthError');
+  const submitBtn = document.getElementById('webAuthSubmit');
+
+  toggle.onclick = (e) => {
+    e.preventDefault();
+    _webAuthMode = _webAuthMode === 'login' ? 'register' : 'login';
+    const login = _webAuthMode === 'login';
+    document.getElementById('webAuthTitle').textContent = login ? 'Welcome back' : 'Create your account';
+    document.getElementById('webAuthSubtitle').textContent = login ? 'Log in to continue.' : 'Start your fitness journey.';
+    submitBtn.textContent = login ? 'Log in' : 'Create account';
+    document.getElementById('webAuthToggleText').textContent = login ? 'New here?' : 'Already have an account?';
+    toggle.textContent = login ? 'Create an account' : 'Log in';
+    document.getElementById('webAuthPassword').setAttribute('autocomplete', login ? 'current-password' : 'new-password');
+    errEl.textContent = '';
+  };
+
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    errEl.textContent = '';
+    const email = document.getElementById('webAuthEmail').value.trim();
+    const password = document.getElementById('webAuthPassword').value;
+    if (!email || password.length < 8) {
+      errEl.textContent = 'Enter an email and a password of at least 8 characters.';
+      return;
+    }
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Please wait…';
+    try {
+      const res = _webAuthMode === 'login'
+        ? await API.loginAccount(email, password)
+        : await API.registerAccount(email, password, email.split('@')[0]);
+      setTokens(res.access_token, res.refresh_token);
+      location.reload();
+    } catch (err) {
+      errEl.textContent = (err && err.message) ? err.message : 'Something went wrong. Try again.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = _webAuthMode === 'login' ? 'Log in' : 'Create account';
+    }
+  };
+}
+
+if (!HAS_TELEGRAM && !getToken()) {
+  _showWebAuth();
 }
 
 // ─── INIT ───────────────────────────────────────
@@ -303,4 +364,4 @@ function haptic(type) {
 }
 
 // ─── START ──────────────────────────────────────
-if (HAS_TELEGRAM || IS_LOCAL) init();
+if (HAS_TELEGRAM || getToken()) init();
