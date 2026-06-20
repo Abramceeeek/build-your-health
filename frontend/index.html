@@ -976,18 +976,12 @@
     </div>
 
     <!-- Reminders Section -->
-    <div class="card" style="margin-top:12px">
-      <div class="card-title" style="margin-bottom:16px">⏰ Reminders</div>
-      <p style="font-size:0.82rem;color:#888;margin-bottom:12px">Telegram will send you reminders at these times. Set your timezone offset to match local time.</p>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-        <label style="font-size:0.85rem;color:#aaa">UTC Offset (minutes)</label>
-        <input type="number" id="remTzOffset" class="input-field" style="width:90px" value="300" placeholder="e.g. 300">
-        <small style="color:#666">+5h = 300</small>
-      </div>
+    <div class="card" id="remindersCard" style="margin-top:16px">
+      <div class="card-title" style="margin-bottom:6px">⏰ Reminders</div>
+      <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:16px;line-height:1.5">Get a nudge at the right time of day. Toggle one on and it fires at that time in your device's local timezone.</p>
       <div id="remindersList">
-        <div style="text-align:center;color:#888;padding:20px">Loading reminders...</div>
+        <div class="reminders-empty">Loading reminders…</div>
       </div>
-      <button onclick="saveReminders()" class="btn btn-green" style="width:100%;margin-top:16px">Save Reminders</button>
     </div>
   </div>
 </div>
@@ -1093,6 +1087,7 @@
 <script src="/js/feedback.js"></script>
 <script src="/js/paywall.js"></script>
 <script src="/js/coach.js?v=1"></script>
+<script src="/js/reminders.js"></script>
 <script>
 // Wrap switchPage so the new Coach tab loads its module. Other pages keep
 // their existing handlers from core.js untouched.

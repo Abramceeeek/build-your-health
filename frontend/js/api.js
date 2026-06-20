@@ -205,4 +205,11 @@ const API = {
   // Cycle tracking
   logPeriod: (data) => api('/api/health/cycle/log-period', { method: 'POST', body: JSON.stringify(data) }),
   getCyclePhase: () => api('/api/health/cycle/phase'),
+
+  // Reminders (trailing slash matches the router's "/" route — avoids a 307 redirect)
+  getReminders: () => api('/api/reminders/'),
+  getReminderTypes: () => api('/api/reminders/types'),
+  createReminder: (data) => api('/api/reminders/', { method: 'POST', body: JSON.stringify(data) }),
+  updateReminder: (id, data) => api(`/api/reminders/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteReminder: (id) => api(`/api/reminders/${id}`, { method: 'DELETE' }),
 };
