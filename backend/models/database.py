@@ -16,7 +16,9 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    telegram_id = Column(BigInteger, unique=True, nullable=False, index=True)
+    telegram_id = Column(BigInteger, unique=True, nullable=True, index=True)  # nullable: email/Apple/Google accounts have no Telegram id
+    email = Column(String(255), unique=True, nullable=True, index=True)
+    password_hash = Column(String(255), nullable=True)  # scrypt; only for email/password accounts
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), default="")
     username = Column(String(100), default="")

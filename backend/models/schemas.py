@@ -15,7 +15,8 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    telegram_id: int
+    telegram_id: Optional[int] = None  # null for email/Apple/Google accounts
+    email: Optional[str] = None
     first_name: str
     last_name: str
     username: str

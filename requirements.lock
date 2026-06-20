@@ -95,6 +95,8 @@ pydantic-settings==2.13.1
     # via
     #   -c _constraints.txt
     #   -r requirements.txt
+pyjwt==2.13.0
+    # via -r requirements.txt
 python-dotenv==1.2.2
     # via
     #   -r requirements.txt

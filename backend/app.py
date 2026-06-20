@@ -10,7 +10,7 @@ import uuid
 
 from backend.config import get_settings
 from backend.models.database import init_db
-from backend.routers import users, tasks, plans, competitions, progress, heatmap, nutrition, exercises, health, feedback, subscriptions, coach, measurements, legal
+from backend.routers import users, tasks, plans, competitions, progress, heatmap, nutrition, exercises, health, feedback, subscriptions, coach, measurements, legal, auth_accounts
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -153,6 +153,7 @@ base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 frontend_dir = os.path.join(base_dir, "frontend")
 uploads_dir = os.path.join(base_dir, "uploads")
 
+app.include_router(auth_accounts.router)
 app.include_router(users.router)
 app.include_router(tasks.router)
 app.include_router(plans.router)
