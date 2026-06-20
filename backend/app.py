@@ -222,4 +222,5 @@ async def exercise_review_page():
 app.mount("/css", StaticFiles(directory=os.path.join(frontend_dir, "css")), name="css")
 app.mount("/js", StaticFiles(directory=os.path.join(frontend_dir, "js")), name="js")
 app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dir, "assets")), name="assets")
+os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
