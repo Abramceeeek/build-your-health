@@ -58,12 +58,16 @@ if settings.sentry_dsn:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ────────────────────────────────────────────────────────────
-    if settings.environment == "production" and settings.database_url.startswith("sqlite"):
-        raise RuntimeError(
-            "SQLite must not be used in production. "
-            "Run: fly postgres create && fly postgres attach --app health-transform"
-        )
-    init_db(settings.database_url)
+    if settings.environment == "production":
+        if settings.database_url.startswith("sqlite"):
+            raise RuntimeError(
+                "SQLite must not be used in production. Point DATABASE_URL at the managed "
+                "Postgres (see DEPLOY_POSTGRES.md)."
+            )
+        # In production Alembic (run in the container CMD) is the single schema source —
+        # do NOT create_all, which would mask migration drift (ARCHITECTURE_REVIEW #4).
+    else:
+        init_db(settings.database_url)
 
     # Seed exercise library and local food database
     from backend.models.database import get_session_factory
