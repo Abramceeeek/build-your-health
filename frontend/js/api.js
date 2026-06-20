@@ -1,11 +1,29 @@
 const API_BASE = window.location.origin;
 
+// ─── Account (email/password) token storage ───────────────────────────────────
+const _TOKEN_KEY = 'bh_access_token';
+const _REFRESH_KEY = 'bh_refresh_token';
+function getToken() { return localStorage.getItem(_TOKEN_KEY); }
+function setTokens(access, refresh) {
+  if (access) localStorage.setItem(_TOKEN_KEY, access);
+  if (refresh) localStorage.setItem(_REFRESH_KEY, refresh);
+}
+function clearTokens() {
+  localStorage.removeItem(_TOKEN_KEY);
+  localStorage.removeItem(_REFRESH_KEY);
+}
+
 function getAuthHeader() {
   const tg = window.Telegram && window.Telegram.WebApp;
   if (tg && tg.initData) {
     return `tma ${tg.initData}`;
   }
-  // Dev fallback only when running locally — production opens via Telegram only.
+  // Web (no Telegram): use the email/password account JWT when logged in.
+  const token = getToken();
+  if (token) {
+    return `Bearer ${token}`;
+  }
+  // Dev fallback only when running locally and not logged in.
   const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
   if (isLocal) {
     return 'dev {"id":12345,"first_name":"Dev","last_name":"User","username":"devuser"}';
@@ -36,6 +54,12 @@ async function api(path, options = {}) {
       if (typeof PaywallModule !== 'undefined') PaywallModule.showUpgradeSheet();
       throw new Error('pro_required');
     }
+    // Account JWT expired/invalid → drop it and reload to the login screen (web only).
+    if (res.status === 401 && getToken() && !(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData)) {
+      clearTokens();
+      location.reload();
+      throw new Error('session_expired');
+    }
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     const detail = err.detail;
     const msg = typeof detail === 'object' ? (detail.message || detail.error || 'API Error') : (detail || err.error || 'API Error');
@@ -46,6 +70,16 @@ async function api(path, options = {}) {
 }
 
 const API = {
+  // ─── Account (email/password) auth ───────────────────────────────────────
+  registerAccount: (email, password, firstName) => api('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, first_name: firstName || '' }),
+  }),
+  loginAccount: (email, password) => api('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  }),
+
   getMe: () => api('/api/users/me'),
   getMyStats: () => api('/api/users/me/stats'),
   getDashboard: () => api('/api/progress/dashboard'),

@@ -2706,9 +2706,9 @@ select.gate-input option { background: #1c1c1e; color: #fff; }
 }
 
 /* ─── TELEGRAM GATE ────────────────────────────────────────────────────── */
-#tgGate[hidden] { display: none; }
-#tgGate {
-  position: fixed; inset: 0; z-index: 9999;
+#tgGate[hidden], #webAuthOverlay[hidden] { display: none; }
+#tgGate, #webAuthOverlay {
+  position: fixed; inset: 0; z-index: 10000;
   background: #000;
   display: flex; align-items: center; justify-content: center;
   padding: 24px;

@@ -7,7 +7,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="css/app.css?v=11">
+<link rel="stylesheet" href="css/app.css?v=12">
 </head>
 <body>
 
@@ -45,6 +45,27 @@
       Tap below to continue in Telegram.
     </p>
     <a id="tgGateLink" class="tg-gate-btn" href="https://t.me/" target="_blank" rel="noopener">Open Telegram</a>
+  </div>
+</div>
+
+<div id="webAuthOverlay" hidden>
+  <div class="tg-gate-card" style="max-width:360px">
+    <div class="tg-gate-icon">💪</div>
+    <h1 class="tg-gate-title" id="webAuthTitle">Welcome back</h1>
+    <p class="tg-gate-body" id="webAuthSubtitle">Log in to continue.</p>
+    <form id="webAuthForm" autocomplete="on">
+      <input id="webAuthEmail" type="email" autocomplete="email" placeholder="Email" required
+             style="width:100%;box-sizing:border-box;padding:13px 14px;margin:6px 0;border-radius:12px;border:1px solid #333;background:#1c1c1e;color:#fff;font-size:16px" />
+      <input id="webAuthPassword" type="password" autocomplete="current-password" placeholder="Password" required minlength="8"
+             style="width:100%;box-sizing:border-box;padding:13px 14px;margin:6px 0;border-radius:12px;border:1px solid #333;background:#1c1c1e;color:#fff;font-size:16px" />
+      <div id="webAuthError" role="alert" style="color:#FF3B30;font-size:13px;min-height:18px;margin:4px 2px"></div>
+      <button id="webAuthSubmit" type="submit" class="tg-gate-btn" style="width:100%;border:none;cursor:pointer">Log in</button>
+    </form>
+    <p style="font-size:14px;margin-top:14px;color:#8e8e93">
+      <span id="webAuthToggleText">New here?</span>
+      <a id="webAuthToggle" href="#" style="color:#0A84FF">Create an account</a>
+    </p>
+    <p style="font-size:13px;margin-top:10px"><a id="webAuthTelegram" href="https://t.me/" target="_blank" rel="noopener" style="color:#8e8e93">Or open in Telegram</a></p>
   </div>
 </div>
 
@@ -1051,12 +1072,12 @@
   </div>
 </div>
 
-<script src="js/api.js?v=8"></script>
+<script src="js/api.js?v=9"></script>
 <script src="js/empty_state.js"></script>
 <script src="js/rings.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/heatmap.js"></script>
-<script src="js/core.js?v=2"></script>
+<script src="js/core.js?v=4"></script>
 <script src="js/auth.js"></script>
 <script src="js/onboarding.js?v=3"></script>
 <script src="js/onboarding2.js?v=4"></script>
