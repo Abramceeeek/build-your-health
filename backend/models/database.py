@@ -5,6 +5,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from datetime import datetime, timezone
 
+from backend.services.crypto_service import EncryptedJSON
+
 Base = declarative_base()
 
 
@@ -35,9 +37,9 @@ class User(Base):
     is_registered = Column(Boolean, default=False)
     registration_completed_at = Column(DateTime, default=None)
     last_truth_confirmed_at = Column(DateTime, default=None)
-    registration_data_json = Column(JSON, default=None)
+    registration_data_json = Column(EncryptedJSON, default=None)  # encrypted at rest (PII: goals, injuries, DOB)
     face_transform_subscribed = Column(Boolean, default=False)
-    memory_json = Column(JSON, default=None)
+    memory_json = Column(EncryptedJSON, default=None)  # encrypted at rest (AI memory about the user)
     sex = Column(String(10), default=None)          # "male" | "female" — backfilled from registration_data_json
     date_of_birth = Column(String(10), default=None)  # YYYY-MM-DD
     sync_token = Column(String(64), default=None, unique=True)  # SHA-256 hash of the Apple Watch Shortcut token (never plaintext)
