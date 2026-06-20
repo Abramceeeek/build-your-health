@@ -228,12 +228,11 @@ async function loadSettingsPage() {
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) themeToggle.checked = (localStorage.getItem('theme') === 'light');
 
-    // Load reminders
-    loadReminders();
+    // Load reminders (function is optional — the reminders UI may not be wired in)
+    if (typeof loadReminders === 'function') loadReminders();
   } catch (e) {
     console.error('Failed to load settings:', e);
-    // Still try to load reminders even if registration fails
-    loadReminders();
+    if (typeof loadReminders === 'function') loadReminders();
   }
 }
 

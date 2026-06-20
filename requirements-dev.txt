@@ -2,3 +2,4 @@
 pytest>=8.0
 pip-tools>=7.0   # to regenerate requirements.lock
 ruff>=0.6        # linter (CI runs an error-only gate)
+pytest-playwright>=0.5  # browser E2E (e2e/ dir; CI installs Chromium in a separate job)
