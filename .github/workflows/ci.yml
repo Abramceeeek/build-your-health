@@ -21,6 +21,9 @@ jobs:
           pip install -r requirements.lock
           pip install -r requirements-dev.txt
 
+      - name: Lint (ruff, error-only gate)
+        run: python -m ruff check --select=E9,F63,F7,F82 backend bot.py main.py tests alembic
+
       - name: Byte-compile
         run: |
           python -m py_compile main.py bot.py $(find backend -name '*.py' -not -path '*__pycache__*')

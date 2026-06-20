@@ -582,7 +582,7 @@ class BodyMeasurementLog(Base):
     __tablename__ = "body_measurement_logs"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # composite indexes below cover user_id
     key = Column(String(80), nullable=False)   # e.g. "bicep_flexed_left", "waist_navel"
     value = Column(Float, nullable=False)
     date = Column(String(10), nullable=False)  # YYYY-MM-DD
