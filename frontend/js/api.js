@@ -50,6 +50,10 @@ const API = {
   getMyStats: () => api('/api/users/me/stats'),
   getDashboard: () => api('/api/progress/dashboard'),
   getRegistrationStatus: () => api('/api/users/me/registration-status'),
+  // offset_minutes = minutes EAST of UTC. JS getTimezoneOffset() is minutes BEHIND UTC, so negate.
+  setTimezone: (offsetMinutes) => api('/api/users/me/timezone', {
+    method: 'PUT', body: JSON.stringify({ offset_minutes: offsetMinutes }),
+  }),
   register: (data) => api('/api/users/register', { method: 'POST', body: JSON.stringify(data) }),
   confirmTruth: () => api('/api/users/confirm-truth', { method: 'POST' }),
 
