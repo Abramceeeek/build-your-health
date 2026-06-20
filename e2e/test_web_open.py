@@ -5,7 +5,11 @@ import uuid
 from conftest import mark_registered, register_account
 
 # 402 = intentional Pro-gating (the app shows a paywall); not a defect for a free test account.
-_BENIGN = ("Telegram", "favicon", "manifest", "ServiceWorker", "402", "Payment Required")
+# ERR_CERT_AUTHORITY_INVALID / ERR_* = third-party origins (telegram.org, Google Fonts) failing to
+# load in an offline/sandboxed run. The app is built to run web-open without them, so these external
+# fetch failures are benign — they can't come from the app's own same-origin HTTP resources.
+_BENIGN = ("Telegram", "favicon", "manifest", "ServiceWorker", "402", "Payment Required",
+           "ERR_CERT_AUTHORITY_INVALID", "telegram.org", "gstatic", "googleapis")
 
 
 def _collect_errors(page):
@@ -58,3 +62,22 @@ def test_primary_tabs_render(live_server, page):
         active = page.get_attribute(".page.active", "id")
         assert active, f"no active page after switchPage('{key}')"
     assert not _real(errors), f"console errors navigating tabs: {_real(errors)}"
+
+
+def test_settings_reminders_render(live_server, page):
+    """The Settings reminders section (loadReminders() → GET /api/reminders/) renders a row per
+    reminder type. Locks in the reminders UI so loadSettingsPage() can't silently no-op again."""
+    token, uid = register_account(live_server, f"rem-{uuid.uuid4().hex[:8]}@example.com")
+    mark_registered(uid)
+    errors = _collect_errors(page)
+    page.goto(live_server)
+    page.evaluate("(t) => localStorage.setItem('bh_access_token', t)", token)
+    page.reload()
+    page.wait_for_selector("#bottomTabs", state="visible", timeout=20000)
+    page.evaluate("switchPage('settings')")
+    # Rows are populated asynchronously from GET /api/reminders/ — wait for the first one.
+    page.wait_for_selector("#remindersList .reminder-row", timeout=10000)
+    rows = page.eval_on_selector_all("#remindersList .reminder-row", "els => els.length")
+    assert rows >= 1, "no reminder rows rendered in Settings"
+    assert "Breakfast" in page.inner_text("#remindersList")
+    assert not _real(errors), f"console errors rendering reminders: {_real(errors)}"

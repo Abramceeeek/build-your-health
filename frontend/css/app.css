@@ -2912,6 +2912,53 @@ select.gate-input option { background: #1c1c1e; color: #fff; }
 #themeToggle:checked + .theme-track { background: var(--blue); }
 #themeToggle:checked + .theme-track::after { transform: translateX(20px); background: #fff; }
 
+/* Reminders (Settings) */
+.reminder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.reminder-row:first-child { border-top: none; }
+.reminder-emoji { font-size: 18px; flex-shrink: 0; }
+.reminder-label { flex: 1; font-size: 14px; color: var(--text-primary); }
+.reminder-time {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 6px 8px;
+  font-size: 13px;
+}
+.reminder-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.reminder-toggle input { opacity: 0; width: 0; height: 0; }
+.reminder-track {
+  position: absolute; inset: 0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.reminder-track::after {
+  content: '';
+  position: absolute; left: 2px; top: 2px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: transform 0.2s, background 0.2s;
+}
+.reminder-toggle input:checked + .reminder-track { background: var(--green); }
+.reminder-toggle input:checked + .reminder-track::after { transform: translateX(20px); background: #fff; }
+.reminders-empty { text-align: center; color: var(--text-tertiary); padding: 16px; font-size: 13px; }
+
 /* L10 — light theme overrides */
 [data-theme="light"] {
   --bg-primary:    #F2F2F7;
