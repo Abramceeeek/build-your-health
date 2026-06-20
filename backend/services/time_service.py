@@ -45,3 +45,15 @@ def user_local_now(user) -> datetime:
 def user_today_str(user) -> str:
     """The user's local calendar day as 'YYYY-MM-DD'."""
     return user_local_now(user).strftime("%Y-%m-%d")
+
+
+def user_day_start_utc(user) -> datetime:
+    """The UTC instant marking the start of the user's local calendar day.
+
+    Returned as a *naive* UTC datetime (tzinfo stripped) so it compares directly against
+    stored timestamps, which are persisted as naive UTC wall-clock (see models.database.utcnow).
+    Use this to bucket rows by the user's local day, e.g.
+    `Row.created_at >= user_day_start_utc(user)`.
+    """
+    local_midnight = user_local_now(user).replace(hour=0, minute=0, second=0, microsecond=0)
+    return local_midnight.astimezone(timezone.utc).replace(tzinfo=None)
