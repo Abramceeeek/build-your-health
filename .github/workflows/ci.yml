@@ -29,7 +29,7 @@ jobs:
           python -m py_compile main.py bot.py $(find backend -name '*.py' -not -path '*__pycache__*')
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest tests/ -q
 
       - name: Migrations apply cleanly + no ORM drift
         env:
@@ -76,3 +76,24 @@ jobs:
           python -m alembic upgrade head
           python -m alembic check
           python -m alembic downgrade base
+
+  # Browser E2E: the app boots in a plain browser, account auth works, primary nav renders.
+  # Guards the web-open flow (Phase C). Separate job so the unit suite never needs a browser.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies + Chromium
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+          pip install -r requirements-dev.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run browser E2E
+        run: python -m pytest e2e/ -q

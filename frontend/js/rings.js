@@ -3,6 +3,10 @@ function drawRing(canvas, percentage, color, lineWidth = 8, startAngle = -Math.P
   const dpr = window.devicePixelRatio || 1;
   const size = canvas.clientWidth;
 
+  // The canvas isn't laid out yet (e.g. drawn while its page is hidden) — skip; it will be
+  // redrawn when visible. Otherwise radius below would go negative and arc() would throw.
+  if (size <= lineWidth * 2) return;
+
   canvas.width = size * dpr;
   canvas.height = size * dpr;
   ctx.scale(dpr, dpr);
