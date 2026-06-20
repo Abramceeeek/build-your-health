@@ -219,6 +219,45 @@ async def admin_patch_image(
     return {"name": ex.name, "image_url": ex.image_url}
 
 
+@router.get("/admin/all")
+async def admin_all_exercises(
+    muscle: str | None = None,
+    page: int = 1,
+    per_page: int = 50,
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Paginated exercise list for visual review. No user-data exposed. Admin only."""
+    settings = get_settings()
+    admin_id = (settings.feedback_admin_chat_id or "").strip()
+    if not admin_id or str(tg_user.get("id")) != admin_id:
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    q = db.query(ExerciseLibrary)
+    if muscle:
+        # Filter by system muscle key in muscle_groups JSON array
+        q = q.filter(ExerciseLibrary.muscle_groups.contains([muscle]))
+    total = q.count()
+    exercises = q.order_by(ExerciseLibrary.name).offset((page - 1) * per_page).limit(per_page).all()
+    return {
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "items": [
+            {
+                "id": ex.id,
+                "name": ex.name,
+                "muscle_groups": ex.muscle_groups or [],
+                "exercise_type": ex.exercise_type or "",
+                "difficulty": ex.difficulty or "",
+                "image_url": ex.image_url or "",
+                "split_tags": ex.split_tags or [],
+            }
+            for ex in exercises
+        ],
+    }
+
+
 @router.get("/admin/missing-images")
 async def admin_list_missing_images(
     tg_user: dict = Depends(get_current_user),

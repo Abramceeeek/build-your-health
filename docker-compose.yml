@@ -2,6 +2,7 @@ version: "3.8"
 services:
   app:
     build: .
+    image: build-your-health:latest
     ports:
       - "8000:8000"
     volumes:
@@ -10,25 +11,46 @@ services:
     env_file: .env
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/users/me')"]
+      # Public, unauthenticated endpoint — /api/users/me requires auth and would 401 -> restart loop.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
+
+  # Telegram bot runs as its own supervised process (not backgrounded inside the API
+  # container). Shares the same image as `app`; `app` runs DB migrations on start.
+  # `build: .` here is a cached no-op so the image always exists under docker-compose v1.
+  bot:
+    build: .
+    image: build-your-health:latest
+    command: ["python", "bot.py"]
+    env_file: .env
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      app:
+        condition: service_started
 
   db:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      # Set POSTGRES_PASSWORD in .env (and match it in DATABASE_URL). Defaults for local only.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: health_transform
-    ports:
-      - "5432:5432"
+    # Not published to the host — only the app/bot reach it over the compose network.
+    # (Expose 5432 temporarily only if you need a local SQL client.)
+    expose:
+      - "5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Back up with: docker compose exec db pg_dump -U postgres health_transform > backup.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d health_transform"]
       interval: 10s

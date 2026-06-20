@@ -11,6 +11,45 @@ from backend.routers.users import get_db, get_or_create_user
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
 TRIAL_DAYS = 14
+REFERRAL_BONUS_DAYS = 7
+
+
+def grant_referral_reward(db: Session, user_id: int, days: int = REFERRAL_BONUS_DAYS) -> None:
+    """Extend (or start) a user's trial by `days`, stacking onto any remaining trial time."""
+    sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
+    now = datetime.now(timezone.utc)
+    base = now
+    if sub and sub.trial_ends_at:
+        end = sub.trial_ends_at.replace(tzinfo=timezone.utc)
+        if end > now:
+            base = end
+    new_end = base + timedelta(days=days)
+    if sub is None:
+        db.add(Subscription(user_id=user_id, tier="free", status="trialing", trial_ends_at=new_end))
+    else:
+        sub.trial_ends_at = new_end
+        if sub.status == "free":
+            sub.status = "trialing"
+    db.commit()
+
+
+def trial_ending_soon(db: Session, within_days: int = 2) -> list[tuple]:
+    """[(telegram_id, days_left)] for trialing users whose trial ends within the window (P4.4)."""
+    from backend.models.database import User
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(days=within_days)
+    subs = db.query(Subscription).filter(
+        Subscription.status == "trialing",
+        Subscription.trial_ends_at.isnot(None),
+    ).all()
+    out = []
+    for s in subs:
+        end = s.trial_ends_at if s.trial_ends_at.tzinfo else s.trial_ends_at.replace(tzinfo=timezone.utc)
+        if now < end <= horizon:
+            u = db.query(User).filter(User.id == s.user_id).first()
+            if u and u.telegram_id:
+                out.append((u.telegram_id, max(1, (end - now).days)))
+    return out
 
 
 def _grant_trial(db: Session, user_id: int) -> Subscription:
@@ -119,17 +158,34 @@ async def create_stars_invoice(
         raise HTTPException(status_code=500, detail=f"Failed to send invoice: {e}")
 
 
-def activate_pro_from_stars(db: Session, user_id: int):
-    """Called by bot.py when Stars payment succeeds."""
+def activate_pro_from_stars(db: Session, user_id: int, charge_id: str = ""):
+    """Called by bot.py when a Stars payment succeeds.
+
+    Idempotent on charge_id (a re-delivered payment is ignored), and renewals STACK onto any
+    remaining paid time instead of resetting the 30-day window so paying users don't lose days.
+    """
     sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
     now = datetime.now(timezone.utc)
-    period_end = now + timedelta(days=30)
+
+    # Idempotency: ignore a payment we've already processed (provider_sub_id holds the charge id).
+    if charge_id and sub and sub.provider_sub_id == charge_id:
+        return sub
+
+    # Renewal: extend from the later of now / current period end.
+    base = now
+    if sub and sub.current_period_end:
+        existing_end = sub.current_period_end.replace(tzinfo=timezone.utc)
+        if existing_end > now:
+            base = existing_end
+    period_end = base + timedelta(days=30)
+
     if sub is None:
         sub = Subscription(
             user_id=user_id,
             tier="pro",
             status="active",
             provider="stars",
+            provider_sub_id=charge_id,
             current_period_end=period_end,
         )
         db.add(sub)
@@ -137,6 +193,7 @@ def activate_pro_from_stars(db: Session, user_id: int):
         sub.tier = "pro"
         sub.status = "active"
         sub.provider = "stars"
+        sub.provider_sub_id = charge_id
         sub.current_period_end = period_end
     db.commit()
     return sub

@@ -1,26 +1,58 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import logging
 import os
+import time
+import uuid
 
 from backend.config import get_settings
 from backend.models.database import init_db
-from backend.routers import users, tasks, plans, competitions, progress, heatmap, nutrition, exercises, health, feedback, subscriptions, coach
+from backend.routers import users, tasks, plans, competitions, progress, heatmap, nutrition, exercises, health, feedback, subscriptions, coach, measurements, legal
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
+def _setup_json_logging():
+    """Opt-in (LOG_JSON=true) structured JSON logs to stdout for prod aggregation."""
+    import json as _json
+
+    class _JsonFormatter(logging.Formatter):
+        def format(self, record):
+            o = {
+                "ts": self.formatTime(record),
+                "level": record.levelname,
+                "logger": record.name,
+                "msg": record.getMessage(),
+            }
+            if record.exc_info:
+                o["exc"] = self.formatException(record.exc_info)
+            return _json.dumps(o)
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(_JsonFormatter())
+    root = logging.getLogger()
+    root.handlers = [handler]
+    root.setLevel(logging.INFO)
+
+
+if os.getenv("LOG_JSON", "").lower() in ("1", "true", "yes"):
+    _setup_json_logging()
+
 if settings.sentry_dsn:
     import sentry_sdk
+    # Full sampling in dev; sample in prod to keep tracing cost sane.
+    _trace_rate = 0.1 if settings.environment == "production" else 1.0
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
-        traces_sample_rate=1.0,
-        profiles_sample_rate=1.0,
+        environment=settings.environment,
+        traces_sample_rate=_trace_rate,
+        profiles_sample_rate=_trace_rate,
     )
-    logger.info("Sentry initialized")
+    logger.info("Sentry initialized (env=%s)", settings.environment)
 
 
 @asynccontextmanager
@@ -51,13 +83,19 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
-    # Start background scheduler (weekly plans + daily reminders)
-    try:
-        from backend.services.scheduler import start_scheduler
-        start_scheduler()
-        logger.info("Background scheduler started")
-    except Exception as e:
-        logger.warning("Scheduler failed to start: %s", e)
+    # Start background scheduler (weekly plans + daily reminders).
+    # Gated on scheduler_enabled so it runs in exactly ONE process. With a single worker
+    # (current deploy) that's automatic; if you scale to >1 worker/replica, set
+    # SCHEDULER_ENABLED=false on all but one to avoid duplicate jobs/notifications.
+    if settings.scheduler_enabled:
+        try:
+            from backend.services.scheduler import start_scheduler
+            start_scheduler()
+            logger.info("Background scheduler started")
+        except Exception as e:
+            logger.warning("Scheduler failed to start: %s", e)
+    else:
+        logger.info("Scheduler disabled (SCHEDULER_ENABLED=false)")
 
     yield
 
@@ -94,6 +132,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    """Tag every response with an X-Request-ID and log slow / 5xx requests for correlation."""
+    rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex[:12]
+    start = time.monotonic()
+    response = await call_next(request)
+    dur_ms = (time.monotonic() - start) * 1000
+    response.headers["X-Request-ID"] = rid
+    if response.status_code >= 500 or dur_ms > 2000:
+        logger.warning(
+            "%s %s -> %s (%.0fms) rid=%s",
+            request.method, request.url.path, response.status_code, dur_ms, rid,
+        )
+    return response
+
+
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 frontend_dir = os.path.join(base_dir, "frontend")
 uploads_dir = os.path.join(base_dir, "uploads")
@@ -110,6 +165,8 @@ app.include_router(health.router)
 app.include_router(feedback.router)
 app.include_router(subscriptions.router)
 app.include_router(coach.router)
+app.include_router(measurements.router)
+app.include_router(legal.router)
 
 # Lazy-import new routers to avoid import errors if dependencies not yet installed
 try:
@@ -152,6 +209,13 @@ async def root():
 async def root_index_html():
     """Some clients request /index.html explicitly; avoid 404."""
     return _index_response()
+
+
+@app.get("/exercise-review")
+@app.get("/exercise-review.html")
+async def exercise_review_page():
+    p = os.path.join(frontend_dir, "exercise-review.html")
+    return FileResponse(p, media_type="text/html")
 
 
 # Static file mounts — API routes use /api/ prefix so no conflicts

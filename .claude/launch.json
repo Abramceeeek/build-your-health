@@ -12,6 +12,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["bot.py"],
       "port": 0
+    },
+    {
+      "name": "Preview API",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-c", "import os; os.environ.update(ENVIRONMENT='development', SCHEDULER_ENABLED='false', DEV_AUTH_ENABLED='true', DATABASE_URL='sqlite:///./health_transform.db'); import uvicorn; uvicorn.run('backend.app:app', host='127.0.0.1', port=8000)"],
+      "port": 8000
     }
   ]
 }

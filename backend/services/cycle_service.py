@@ -11,6 +11,23 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+MIN_CYCLE_LENGTH = 21
+MAX_CYCLE_LENGTH = 35
+DEFAULT_CYCLE_LENGTH = 28
+
+
+def normalize_cycle_length(n) -> int:
+    """Clamp cycle length to the medically normal 21–35 day range (default 28 if
+    missing/invalid). Prevents nonsensical phase math for unrealistic values (e.g. a
+    10- or 45-day cycle) instead of silently trusting an unbounded user input (H11).
+    """
+    try:
+        v = int(n)
+    except (TypeError, ValueError):
+        return DEFAULT_CYCLE_LENGTH
+    return max(MIN_CYCLE_LENGTH, min(MAX_CYCLE_LENGTH, v))
+
+
 PHASE_ADJUSTMENTS = {
     "menstrual": {
         "intensity_mod": -0.20,
@@ -61,7 +78,7 @@ def get_current_phase(user_id: int, db: Session) -> Optional[dict]:
     except ValueError:
         return None
 
-    cycle_length = row.cycle_length or 28
+    cycle_length = normalize_cycle_length(row.cycle_length)
     today = date.today()
     days_since = (today - lps).days
 
@@ -87,6 +104,8 @@ def log_period(user_id: int, last_period_start: str, cycle_length: int, db: Sess
     """Save a period start date. Replaces any existing record for the same start date."""
     from backend.models.database import CycleLog
     from datetime import datetime, timezone
+
+    cycle_length = normalize_cycle_length(cycle_length)
 
     existing = db.query(CycleLog).filter(
         CycleLog.user_id == user_id,

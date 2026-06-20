@@ -146,6 +146,52 @@ async function loadDashboard() {
   if (params.get('invite')) {
     showJoinComp(params.get('invite'));
   }
+  // Referral capture (?ref=<id> or Telegram start_param "ref_<id>")
+  const startParam = (window.Telegram && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.start_param) || '';
+  const refRaw = params.get('ref') || startParam.replace(/^ref_/, '');
+  if (refRaw && /^\d+$/.test(refRaw)) window._referredBy = parseInt(refRaw, 10);
+}
+
+async function shareReferral() {
+  try {
+    if (!currentUser || !currentUser.id) { showToast('Open the app first'); return; }
+    const cfg = await fetch('/api/public/config').then(r => r.json());
+    const bot = cfg.bot_username;
+    if (!bot) { showToast('Referral link unavailable'); return; }
+    const link = `https://t.me/${bot}?start=ref_${currentUser.id}`;
+    const text = 'Join me on claudeGYM — we both get +7 days of Pro!';
+    if (window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) {
+      Telegram.WebApp.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(link);
+      showToast('Referral link copied');
+    }
+  } catch (e) {
+    showToast('Could not create referral link');
+  }
+}
+
+async function showWeeklyReview() {
+  if (typeof closeMenu === 'function') closeMenu();
+  openModal('<div style="text-align:center;padding:24px;color:var(--text-secondary)">Generating your weekly review…</div>');
+  try {
+    const d = await API.getWeeklyReview();
+    const r = (d && d.review) || {};
+    const acts = (r.action_items || []).map(a => `<li>${escHtml(a)}</li>`).join('');
+    const cites = (r.citations || []).map(c =>
+      `<a href="${escHtml(c.url)}" target="_blank" rel="noopener" style="color:var(--accent);font-size:12px;display:block;margin-top:4px">${escHtml(c.title)}</a>`
+    ).join('');
+    openModal(`
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:6px">Weekly Review${r.overall_grade ? ' · ' + escHtml(r.overall_grade) : ''}</h3>
+      <p style="color:var(--text-secondary);margin-bottom:12px">${escHtml(r.headline || '')}</p>
+      ${r.top_win ? `<div style="font-size:13px;margin-bottom:6px"><b>Top win:</b> ${escHtml(r.top_win)}</div>` : ''}
+      ${r.top_fix ? `<div style="font-size:13px;margin-bottom:6px"><b>Top fix:</b> ${escHtml(r.top_fix)}</div>` : ''}
+      ${acts ? `<ul style="font-size:13px;margin:8px 0 8px 18px;line-height:1.6">${acts}</ul>` : ''}
+      ${cites ? `<div style="margin-top:12px;font-size:11px;color:var(--text-tertiary)">Backed by research</div>${cites}` : ''}
+    `);
+  } catch (e) {
+    openModal(`<div style="padding:18px;color:var(--text-secondary)">${escHtml((e && e.message) || 'Could not load review')}.<br><br>Weekly Review is a Pro feature.</div>`);
+  }
 }
 
 function setupFallback() {

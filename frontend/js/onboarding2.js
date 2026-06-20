@@ -188,6 +188,8 @@ async function obSubmitRegistration() {
       gender: d.gender, goals: d.goals, experience_level: d.experience_level || 'beginner',
       gym_days_per_week: gymDays, available_equipment: [d.available_equipment || 'full_gym'],
       injuries: d.injuries, height_cm: parseFloat(d.height_cm) || null, weight_kg: parseFloat(d.weight_kg) || null,
+      age: parseInt(d.age, 10) || null,
+      referred_by: window._referredBy || null,
       gym_schedule_type: d.gym_schedule_type, gym_specific_days: d.gym_specific_days,
       gym_every_n_days: d.gym_every_n_days,
       muscle_schedule: Object.keys(d.muscle_schedule).length > 0 ? d.muscle_schedule : null,

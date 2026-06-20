@@ -28,7 +28,7 @@ def _generate_invite_code(db: Session) -> str:
     raise HTTPException(status_code=500, detail="Could not generate unique invite code")
 
 
-def _calc_member_score(db: Session, user_id: int, start_date: str, end_date: str, challenge_type: str = "classic") -> dict:
+def _calc_member_score(db: Session, user_id: int, start_date: str, end_date: str, challenge_type: str = "classic", user=None) -> dict:
     tasks = db.query(DailyTask).filter(
         DailyTask.user_id == user_id,
         DailyTask.date >= start_date,
@@ -39,7 +39,9 @@ def _calc_member_score(db: Session, user_id: int, start_date: str, end_date: str
     total = len(tasks)
     pct = (completed / total * 100) if total else 0
 
-    user = db.query(User).filter(User.id == user_id).first()
+    # Reuse the already-loaded user when the caller has it (avoids an N+1 query per member).
+    if user is None:
+        user = db.query(User).filter(User.id == user_id).first()
     streak_bonus = min(user.streak_days * 2.0, 20.0) if user else 0
 
     consistency_dates = set()
@@ -246,27 +248,30 @@ async def get_leaderboard(
         CompetitionMember.competition_id == comp_id,
     ).all()
 
+    users_by_id = {
+        u.id: u for u in db.query(User).filter(
+            User.id.in_([m.user_id for m in members])
+        ).all()
+    } if members else {}
+
     entries = []
     for m in members:
-        user = db.query(User).filter(User.id == m.user_id).first()
+        user = users_by_id.get(m.user_id)
         if not user:
             continue
 
-        scores = _calc_member_score(db, user.id, comp.start_date, comp.end_date, comp.challenge_type or "classic")
-
-        m.score = scores["score"]
-        m.tasks_completed = scores["tasks_completed"]
-        m.tasks_total = scores["tasks_total"]
-        m.streak_bonus = scores["streak_bonus"]
+        scores = _calc_member_score(db, user.id, comp.start_date, comp.end_date,
+                                    comp.challenge_type or "classic", user=user)
 
         entries.append({
             "user": user,
-            "member": m,
             "scores": scores,
             "is_self": user.id == current_user.id,
         })
 
-    db.commit()
+    # Read-only endpoint: scores are recomputed from source data each call and the response
+    # uses the computed dict — so we no longer persist them onto member rows + commit on every
+    # view (that was a needless write/row-lock on a GET). (H12)
     entries.sort(key=lambda e: e["scores"]["score"], reverse=True)
 
     return [
@@ -312,17 +317,24 @@ async def get_highlights(
         CompetitionMember.competition_id == comp_id,
     ).all()
 
+    users_by_id = {
+        u.id: u for u in db.query(User).filter(
+            User.id.in_([m.user_id for m in members])
+        ).all()
+    } if members else {}
+
     highlights = []
     best_streak = {"name": "", "value": 0}
     most_tasks = {"name": "", "value": 0}
     best_score = {"name": "", "value": 0}
 
     for m in members:
-        user = db.query(User).filter(User.id == m.user_id).first()
+        user = users_by_id.get(m.user_id)
         if not user:
             continue
 
-        scores = _calc_member_score(db, user.id, comp.start_date, comp.end_date, comp.challenge_type or "classic")
+        scores = _calc_member_score(db, user.id, comp.start_date, comp.end_date,
+                                    comp.challenge_type or "classic", user=user)
 
         if user.streak_days > best_streak["value"]:
             best_streak = {"name": user.first_name, "value": user.streak_days}

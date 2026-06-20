@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, date, timezone, timedelta
 
 from backend.auth import get_current_user
 from backend.routers.users import get_db, get_or_create_user
@@ -136,6 +136,40 @@ async def update_streak(
     }
 
 
+def _perfect_day_streak(db: Session, user: User, lookback_days: int = 120) -> int:
+    """Longest run of consecutive calendar days on which every task was completed.
+
+    A "perfect day" = a day with >=1 task where all tasks are done. Returns the max
+    consecutive run within the lookback window. Previously this was hardcoded to 0/1 for
+    *today only*, which made the 7-in-a-row "Perfect Week" achievement impossible (H7).
+    """
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    rows = db.query(DailyTask.date, DailyTask.completed).filter(
+        DailyTask.user_id == user.id,
+        DailyTask.date >= cutoff,
+    ).all()
+    by_day: dict[str, list[int]] = {}
+    for d, completed in rows:
+        agg = by_day.setdefault(d, [0, 0])  # [done, total]
+        agg[1] += 1
+        if completed:
+            agg[0] += 1
+    perfect = sorted(
+        date.fromisoformat(d) for d, (done, total) in by_day.items()
+        if total > 0 and done == total
+    )
+    if not perfect:
+        return 0
+    max_run = run = 1
+    for i in range(1, len(perfect)):
+        if (perfect[i] - perfect[i - 1]).days == 1:
+            run += 1
+            max_run = max(max_run, run)
+        else:
+            run = 1
+    return max_run
+
+
 def _check_achievements(db: Session, user: User):
     existing = {a.achievement_type for a in db.query(Achievement).filter(
         Achievement.user_id == user.id
@@ -145,13 +179,7 @@ def _check_achievements(db: Session, user: User):
         DailyTask.user_id == user.id, DailyTask.completed == True
     ).count()
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    today_tasks = db.query(DailyTask).filter(
-        DailyTask.user_id == user.id, DailyTask.date == today
-    ).all()
-    today_done = sum(1 for t in today_tasks if t.completed)
-    today_total = len(today_tasks)
-    perfect_days = 1 if (today_total > 0 and today_done == today_total) else 0
+    perfect_days = _perfect_day_streak(db, user)
 
     comp_count = db.query(CompetitionMember).filter(
         CompetitionMember.user_id == user.id

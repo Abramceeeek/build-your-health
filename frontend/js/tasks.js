@@ -413,12 +413,27 @@ async function toggleTask(taskId, payload) {
 // ─── EXERCISE DETAIL ────────────────────────────
 let currentExerciseTaskId = null;
 let currentExerciseName = '';
+let _selectedRpe = null;   // "easy" | "right" | "brutal" — drives next-session weight
+
+function setRpe(key) {
+  _selectedRpe = key;
+  ['Easy', 'Right', 'Brutal'].forEach(label => {
+    const el = document.getElementById('rpe' + label);
+    if (el) el.classList.toggle('active', label.toLowerCase() === key);
+  });
+}
 
 async function showExerciseDetail(taskId, title, sets, weight, completed) {
   currentExerciseTaskId = taskId;
   currentExerciseName = title;
+  _selectedRpe = null;
+  ['Easy', 'Right', 'Brutal'].forEach(label => {
+    const el = document.getElementById('rpe' + label);
+    if (el) el.classList.remove('active');
+  });
 
   document.getElementById('exDetailTitle').textContent = title;
+  document.getElementById('exDetailImg').alt = title ? `${title} demonstration` : 'Exercise';
   document.getElementById('exDetailImg').style.display = 'none';
   document.getElementById('exDetailPrescribed').innerHTML = `
     ${sets ? `<span class="ex-pill accent">${sets}</span>` : ''}
@@ -538,8 +553,9 @@ async function completeExercise() {
   const weight = document.getElementById('exWeightInput').value.trim();
   const sets = document.getElementById('exSetsInput').value.trim();
 
-  // Log weight if provided
-  if (weight || sets) {
+  // Log weight + RPE if provided. RPE ("easy"/"right"/"brutal") is stored as `notes` and
+  // drives next session's top set (coach_weight.get_next_top_weight).
+  if (weight || sets || _selectedRpe) {
     try {
       await API.logWeight({
         task_id: currentExerciseTaskId,
@@ -547,6 +563,7 @@ async function completeExercise() {
         date: getTodayStr(),
         actual_weight: weight,
         sets_completed: sets,
+        notes: _selectedRpe || undefined,
       });
     } catch (e) {
       // Weight log is optional, continue to toggle

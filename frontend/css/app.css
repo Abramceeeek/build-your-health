@@ -11,7 +11,7 @@
   /* ── Text ── */
   --text-primary: #EEEEF8;
   --text-secondary: #6E6E9A;
-  --text-tertiary: #42425A;
+  --text-tertiary: #7E7E9C;  /* ~4.9:1 on the dark bg — was #42425A (~2:1), failed WCAG AA (H14) */
 
   /* ── Structure ── */
   --separator: rgba(255, 255, 255, 0.07);
@@ -3445,3 +3445,13 @@ select.gate-input option { background: #1c1c1e; color: #fff; }
   background: rgba(0,200,150,0.15);
   display: flex; align-items: center; justify-content: center;
 }
+
+/* RPE feedback chips (adaptive progression) */
+.rpe-row { display: flex; gap: 8px; }
+.rpe-chip {
+  flex: 1; padding: 10px 0; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg-tertiary);
+  color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all .15s ease;
+}
+.rpe-chip.active { border-color: var(--blue); color: var(--text-primary); background: rgba(40,110,255,0.18); }

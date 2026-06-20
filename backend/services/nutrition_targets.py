@@ -4,14 +4,24 @@ Mifflin-St Jeor BMR + activity factor + goal modifier produces personalised
 calorie / macro targets. Replaces the hardcoded 2200 / 150 / 250 / 70 placeholders
 that previously appeared for every user regardless of their onboarding inputs.
 
-Age is not currently captured in onboarding; we default to 30 (adult median).
-The error introduced is roughly 5 kcal per year of deviation — small relative to
-the activity-factor uncertainty.
+Age is captured during onboarding; when missing or invalid we fall back to 30
+(adult median). Age is clamped to a sane 14–90 range before use.
 """
 
 from typing import Iterable, Optional
 
 DEFAULT_AGE = 30
+MIN_AGE = 14
+MAX_AGE = 90
+
+
+def normalize_age(age) -> int:
+    """Coerce a possibly-missing/invalid age to a sane integer in [MIN_AGE, MAX_AGE]."""
+    try:
+        a = int(age)
+    except (TypeError, ValueError):
+        return DEFAULT_AGE
+    return max(MIN_AGE, min(MAX_AGE, a))
 
 
 def bmr_mifflin_st_jeor(sex: str, weight_kg: float, height_cm: float, age: int = DEFAULT_AGE) -> float:
@@ -49,6 +59,7 @@ def compute_targets(
     gym_days_per_week: Optional[int],
     age: int = DEFAULT_AGE,
 ) -> dict:
+    age = normalize_age(age)
     bmr = bmr_mifflin_st_jeor(sex, weight_kg, height_cm, age)
     cal = bmr * activity_factor(gym_days_per_week) * goal_modifier(goals)
     cal = round(cal, 0)

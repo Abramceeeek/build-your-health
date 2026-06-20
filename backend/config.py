@@ -13,7 +13,6 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     openrouter_api_key: str = ""
     webapp_url: str = ""
-    secret_key: str = "dev-secret-change-me"  # WARNING: override via SECRET_KEY env var in production!
     upload_dir: str = "./uploads/photos"
     host: str = "0.0.0.0"
     port: int = 8000

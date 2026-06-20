@@ -88,7 +88,7 @@ async def get_current_user(request: Request) -> dict:
         from backend.models.database import User
         db = next(get_db())
         try:
-            user = db.query(User).filter(User.sync_token == token).first()
+            user = db.query(User).filter(User.sync_token == hash_sync_token(token)).first()
         finally:
             db.close()
         if not user:
@@ -115,5 +115,11 @@ async def get_current_user(request: Request) -> dict:
 
 
 def generate_sync_token() -> str:
-    """Generate a cryptographically random 32-byte hex sync token."""
+    """Generate a cryptographically random 32-byte hex sync token (the plaintext)."""
     return secrets.token_hex(32)
+
+
+def hash_sync_token(token: str) -> str:
+    """SHA-256 hex of a sync token. Only the hash is stored, so a DB leak cannot expose
+    usable Apple Watch tokens. SHA-256 hex is 64 chars — fits the sync_token column."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

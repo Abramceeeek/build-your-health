@@ -28,6 +28,8 @@ class UserResponse(BaseModel):
     longest_streak: int
     streak_freezes: int
     joined_at: datetime
+    sex: Optional[str] = None
+    date_of_birth: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -209,6 +211,8 @@ class RegistrationRequest(BaseModel):
     injuries: str = ""
     height_cm: Optional[float] = None
     weight_kg: Optional[float] = None
+    age: Optional[int] = None                         # years; used for BMR/TDEE targets
+    referred_by: Optional[int] = None                 # referrer user id (from ?ref= deep link)
     # ── Custom gym day scheduling ─────────────────────────────────────────
     gym_schedule_type: str = "specific_days"          # specific_days | every_n_days | daily
     gym_specific_days: Optional[list[int]] = None     # [0,2,4] = Mon/Wed/Fri (0=Mon, 6=Sun)

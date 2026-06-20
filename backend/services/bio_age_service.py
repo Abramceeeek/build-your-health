@@ -19,6 +19,11 @@ _VO2MAX_NORMS: dict[str, dict[str, float]] = {
     "female": {"20s": 38, "30s": 35, "40s": 32, "50s": 29, "60s": 25},
 }
 
+# Physiologically plausible VO2max range (ml/kg/min). Elite humans top out ~85;
+# values outside this indicate sensor/RHR error and must not inflate the score.
+VO2MAX_MIN = 20.0
+VO2MAX_MAX = 85.0
+
 
 def _age_bracket(age: int) -> str:
     if age < 30:
@@ -88,18 +93,24 @@ def compute_bio_age(user, db: Session) -> Optional[dict]:
         DailyHealthLog.date >= cutoff,
     ).order_by(DailyHealthLog.date.desc()).first()
 
-    vo2max: Optional[float] = vo2max_row.vo2max if vo2max_row else None
+    vo2max: Optional[float] = (
+        _clamp(vo2max_row.vo2max, VO2MAX_MIN, VO2MAX_MAX)
+        if vo2max_row and vo2max_row.vo2max else None
+    )
 
-    # HUNT Non-Exercise estimate: 15.3 × (max_hr / resting_hr)
+    # HUNT Non-Exercise estimate: 15.3 × (max_hr / resting_hr).
+    # Require a plausible RHR and clamp the result — an erroneously low RHR (sensor glitch)
+    # would otherwise produce an impossible VO2max and a falsely young bio-age.
     if vo2max is None:
         rhr_row = db.query(DailyHealthLog).filter(
             DailyHealthLog.user_id == user.id,
-            DailyHealthLog.resting_hr > 30,
+            DailyHealthLog.resting_hr >= 40,
+            DailyHealthLog.resting_hr <= 100,
             DailyHealthLog.date >= cutoff,
         ).order_by(DailyHealthLog.date.desc()).first()
         if rhr_row and rhr_row.resting_hr:
             max_hr = 220 - age
-            vo2max = 15.3 * (max_hr / rhr_row.resting_hr)
+            vo2max = _clamp(15.3 * (max_hr / rhr_row.resting_hr), VO2MAX_MIN, VO2MAX_MAX)
 
     norm = _VO2MAX_NORMS[sex][_age_bracket(age)]
     cardiovascular_score = _clamp((vo2max / norm * 100) if vo2max else 50.0)
@@ -111,12 +122,12 @@ def compute_bio_age(user, db: Session) -> Optional[dict]:
         DailyHealthLog.date >= week_ago,
     ).all()
 
-    # Approximate active minutes from steps (2000 steps ≈ 20 min brisk walk)
+    # Steps and active-calories from the same wearable describe overlapping activity,
+    # so take the larger estimate rather than summing them (summing double-counts and
+    # pushes sedentary users to 100). 2000 steps ≈ 20 min brisk walk; 4 kcal/min ≈ moderate.
     total_steps = sum((l.steps or 0) for l in recent_logs)
-    weekly_active_min = total_steps / 100  # rough conversion
-    # Add time from active calories if available (4 kcal/min moderate intensity)
     total_active_cal = sum((l.active_calories or 0) for l in recent_logs)
-    weekly_active_min += total_active_cal / 4
+    weekly_active_min = max(total_steps / 100, total_active_cal / 4)
     activity_score = _clamp(weekly_active_min / 150 * 100)
 
     # --- Body composition score ---

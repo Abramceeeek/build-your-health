@@ -49,15 +49,15 @@ SMALL_MUSCLES = [k for k, v in MUSCLE_GROUPS.items() if v["tier"] == "small"]
 # (case-insensitive partial match)
 MUSCLE_SEARCH_TERMS = {
     "chest":      ["chest", "pectoral", "pec"],
-    "back":       ["back", "lat", "latissimus", "rhomboid", "trapezius"],
-    "legs":       ["quad", "hamstring", "glute", "leg", "squat"],
-    "shoulders":  ["shoulder", "deltoid", "delt", "overhead press"],
-    "biceps":     ["bicep", "curl"],
-    "triceps":    ["tricep", "pushdown", "extension"],
-    "abs":        ["ab", "core", "abdominal", "plank", "crunch"],
+    "back":       ["back", "lat", "latissimus", "rhomboid", "trapezius", "trap"],
+    "legs":       ["quad", "hamstring", "glute", "adductor", "abductor", "hip flexor"],
+    "shoulders":  ["shoulder", "deltoid", "delt"],
+    "biceps":     ["bicep", "brachialis"],
+    "triceps":    ["tricep"],
+    "abs":        ["abdominal", "oblique", "core", "serratus"],
     "neck":       ["neck"],
     "forearms":   ["forearm", "wrist", "grip"],
-    "rear_delts": ["rear delt", "face pull", "reverse fly"],
+    "rear_delts": ["rear delt", "posterior delt"],
     "calves":     ["calf", "calves", "soleus", "gastrocnemius"],
 }
 
@@ -145,9 +145,16 @@ def _find_exercises_for_muscle(
         primary = ex.muscle_primary or []
         secondary = ex.muscle_secondary or []
         groups = ex.muscle_groups or []
-        all_tags = [t.lower() for t in primary + secondary + groups] + [ex.name.lower()]
-        text_blob = " ".join(all_tags)
 
+        # Exact key match first (normalized muscle_groups from fix_muscle_groups.py)
+        all_keys = [g.lower() for g in groups]
+        if muscle_key in all_keys:
+            matched.append(ex)
+            continue
+
+        # Substring search on muscle data only — do NOT include exercise name
+        # (including name caused "Leg Curl"→biceps, "Leg Extension"→triceps false positives)
+        text_blob = " ".join(t.lower() for t in primary + secondary + groups)
         if any(term.lower() in text_blob for term in search_terms):
             matched.append(ex)
 

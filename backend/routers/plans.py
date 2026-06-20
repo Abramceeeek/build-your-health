@@ -104,42 +104,49 @@ async def generate_new_plan(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
 
-    old_plans = db.query(UserPlan).filter(
-        UserPlan.user_id == user.id,
-        UserPlan.status == "active",
-    ).all()
-    for p in old_plans:
-        p.status = "replaced"
-
     today = datetime.now(timezone.utc)
     monday = today - timedelta(days=today.weekday())
     week_start = monday.strftime("%Y-%m-%d")
 
-    new_plan = UserPlan(
-        user_id=user.id,
-        week_start=week_start,
-        plan_json=plan_data,
-        analysis_json=analysis,
-        status="active",
-    )
-    db.add(new_plan)
-    db.commit()
-    db.refresh(new_plan)
-
-    for i in range(7):
-        day_date = (monday + timedelta(days=i)).strftime("%Y-%m-%d")
-        existing = db.query(DailyTask).filter(
-            DailyTask.user_id == user.id,
-            DailyTask.date == day_date,
+    # Atomic: replacing old plans, creating the new plan, and creating all 7 days of tasks
+    # happen in ONE transaction. Previously the plan was committed before its tasks, so a
+    # mid-loop failure left an active plan with missing/no tasks and the old plan already
+    # marked "replaced" (H5).
+    try:
+        old_plans = db.query(UserPlan).filter(
+            UserPlan.user_id == user.id,
+            UserPlan.status == "active",
         ).all()
-        for t in existing:
-            if not t.completed:
-                db.delete(t)
-        db.commit()
+        for p in old_plans:
+            p.status = "replaced"
 
-        new_tasks = create_tasks_from_plan(user.id, new_plan.id, day_date, plan_data)
-        db.add_all(new_tasks)
-    db.commit()
+        new_plan = UserPlan(
+            user_id=user.id,
+            week_start=week_start,
+            plan_json=plan_data,
+            analysis_json=analysis,
+            status="active",
+        )
+        db.add(new_plan)
+        db.flush()  # assign new_plan.id without committing
+
+        for i in range(7):
+            day_date = (monday + timedelta(days=i)).strftime("%Y-%m-%d")
+            existing = db.query(DailyTask).filter(
+                DailyTask.user_id == user.id,
+                DailyTask.date == day_date,
+            ).all()
+            for t in existing:
+                if not t.completed:
+                    db.delete(t)
+            new_tasks = create_tasks_from_plan(user.id, new_plan.id, day_date, plan_data)
+            db.add_all(new_tasks)
+
+        db.commit()
+        db.refresh(new_plan)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Plan creation failed: {str(e)}")
 
     return {
         "plan_id": new_plan.id,

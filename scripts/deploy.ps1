@@ -1,39 +1,53 @@
-# Deploy Health Transform to Oracle Cloud (PowerShell)
-# Usage: .\scripts\deploy.ps1
+# Deploy Build-your-health to the server (single canonical deploy script).
+#
+# Usage:
+#   .\scripts\deploy.ps1
+#   .\scripts\deploy.ps1 -Server ubuntu@1.2.3.4 -SshKey C:\path\key -RemoteDir /home/ubuntu/health-app
+#
+# Defaults match the current Oracle Cloud box but can be overridden via env vars:
+#   DEPLOY_SERVER, DEPLOY_SSH_KEY, DEPLOY_REMOTE_DIR
+#
+# IMPORTANT: this script does NOT copy .env to the server (unlike the old `scp -r .`
+# flow). Provision ~/app/.env on the server once, out of band, so secrets never travel
+# through this deploy. Unlike `scp -r "...\."`, this also skips .git, .claude/worktrees
+# (the separate HealthOS app), the local *.db, uploads/, and caches.
+
+param(
+    [string]$Server    = $(if ($env:DEPLOY_SERVER)     { $env:DEPLOY_SERVER }     else { "ubuntu@132.145.58.45" }),
+    [string]$SshKey    = $(if ($env:DEPLOY_SSH_KEY)    { $env:DEPLOY_SSH_KEY }    else { "$env:USERPROFILE\Downloads\ssh-key-2026-04-06.key" }),
+    [string]$RemoteDir = $(if ($env:DEPLOY_REMOTE_DIR) { $env:DEPLOY_REMOTE_DIR } else { "/home/ubuntu/app" })
+)
 
 $ErrorActionPreference = "Stop"
+$ProjectRoot = Split-Path -Parent $PSScriptRoot
 
-# ── Configuration ──────────────────────────────
-$Server = "ubuntu@132.145.58.45"
-$SSHKey = "$env:USERPROFILE\.ssh\oracle_key"
-$RemoteDir = "/home/ubuntu/health-app"
-
-Write-Host "🚀 Deploying Health Transform..." -ForegroundColor Cyan
-
-# ── Sync files using scp (rsync alternative for Windows) ──
-Write-Host "📦 Syncing files to server..." -ForegroundColor Yellow
-
-# Create exclude list
-$ExcludeDirs = @('.env', '__pycache__', '*.pyc', '*.db', 'data', 'uploads', '.git', 'node_modules', '.venv')
-
-# Use scp for key directories
-$Dirs = @('backend', 'frontend', 'alembic', 'scripts')
-$Files = @('main.py', 'bot.py', 'alembic.ini', 'Dockerfile', 'docker-compose.yml', 'requirements.txt')
-
-foreach ($dir in $Dirs) {
-    Write-Host "  Copying $dir/..." -ForegroundColor Gray
-    scp -i $SSHKey -r "./$dir" "${Server}:${RemoteDir}/"
+if (-not (Test-Path $SshKey)) {
+    Write-Error "SSH key not found: $SshKey  (set DEPLOY_SSH_KEY or pass -SshKey)"
+    exit 1
 }
 
-foreach ($file in $Files) {
-    if (Test-Path $file) {
-        Write-Host "  Copying $file..." -ForegroundColor Gray
-        scp -i $SSHKey "./$file" "${Server}:${RemoteDir}/"
+Write-Host "Deploying to ${Server}:${RemoteDir}" -ForegroundColor Cyan
+
+# Files/dirs the server needs. .env is intentionally excluded (provisioned server-side).
+$Items = @(
+    "backend", "frontend", "alembic", "scripts",
+    "alembic.ini", "bot.py", "main.py",
+    "requirements.txt", "requirements.lock",
+    "Dockerfile", "docker-compose.yml", ".env.example"
+)
+
+# Ensure the remote dir exists.
+ssh -i $SshKey $Server "mkdir -p $RemoteDir"
+
+foreach ($item in $Items) {
+    $src = Join-Path $ProjectRoot $item
+    if (Test-Path $src) {
+        Write-Host "  -> $item" -ForegroundColor Gray
+        scp -i $SshKey -r -q "$src" "${Server}:${RemoteDir}/"
     }
 }
 
-# ── Rebuild and restart ───────────────────────
-Write-Host "🔨 Rebuilding on server..." -ForegroundColor Yellow
-ssh -i $SSHKey $Server "cd $RemoteDir && docker compose down && docker compose up -d --build && echo '✅ Done!' && docker compose logs --tail 20"
+Write-Host "Rebuilding & restarting (docker-compose v1)..." -ForegroundColor Cyan
+ssh -i $SshKey $Server "cd $RemoteDir && docker-compose down --remove-orphans && docker-compose up -d --build && docker-compose ps && docker-compose logs --tail 30"
 
-Write-Host "🎉 Deployment complete!" -ForegroundColor Green
+Write-Host "Deployment complete." -ForegroundColor Green

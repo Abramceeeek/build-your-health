@@ -39,12 +39,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     deep_link_arg = context.args[0] if context.args else None
     invite_code = None
+    ref_id = None
     if deep_link_arg and deep_link_arg.startswith("join_"):
         invite_code = deep_link_arg[5:]
+    elif deep_link_arg and deep_link_arg.startswith("ref_"):
+        ref_id = deep_link_arg[4:]
 
     webapp_url = WEBAPP_URL
     if invite_code:
         webapp_url += f"?invite={invite_code}"
+    elif ref_id:
+        webapp_url += f"?ref={ref_id}"
 
     # Check if user is registered in the DB
     from backend.config import get_settings
@@ -330,7 +335,9 @@ async def successful_payment_handler(update: Update, context: ContextTypes.DEFAU
         try:
             user = db.query(User).filter(User.telegram_id == tg_user.id).first()
             if user:
-                activate_pro_from_stars(db, user.id)
+                sp = update.message.successful_payment
+                charge_id = sp.telegram_payment_charge_id if sp else ""
+                activate_pro_from_stars(db, user.id, charge_id=charge_id)
                 await update.message.reply_text(
                     "Pro activated! All Pro features are now unlocked. Open the app to get started.",
                 )

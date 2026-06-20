@@ -1612,6 +1612,10 @@ def seed_exercise_library(db: Session) -> int:
 
 # MET values reference for calorie estimation
 # Source: Compendium of Physical Activities (Ainsworth et al.)
+# NOTE: pure MET × weight × hours overestimates resistance training, which includes rest
+# between sets. The fallback below instead uses kcal/min-at-75kg values calibrated to the
+# curated per-exercise `calories_per_min` seed data, so library and non-library exercises
+# stay on one consistent scale (H8). Kept for reference / external import compatibility.
 MET_VALUES = {
     "compound_heavy": 8.0,     # Squat, Deadlift, Bench Press
     "compound_medium": 6.0,    # Rows, OHP, Lunges
@@ -1622,6 +1626,16 @@ MET_VALUES = {
     "stretch": 2.0,            # Mobility, yoga
 }
 
+# Fallback kcal/min at a 75kg reference, by exercise_type. Calibrated to the curated seed
+# `calories_per_min` ranges (compound ~5.5-6.5, isolation ~3.5-4.5, cardio ~7-9, etc.).
+_PER_MIN_AT_75KG = {
+    "compound": 6.0,
+    "isolation": 4.0,
+    "isometric": 3.5,
+    "cardio": 8.5,
+    "stretch": 2.5,
+}
+
 
 def estimate_calories_burned(
     exercise_name: str,
@@ -1630,23 +1644,19 @@ def estimate_calories_burned(
     exercise_type: str = "compound",
     calories_per_min_override: float = None,
 ) -> float:
-    """
-    Estimate calories burned using MET values.
-    Formula: Calories = MET × weight_kg × duration_hours
-    Returns kcal burned.
-    """
-    if calories_per_min_override and calories_per_min_override > 0:
-        # Scale from reference 75kg to actual user weight
-        scale = user_weight_kg / 75.0
-        return round(calories_per_min_override * scale * duration_minutes, 1)
+    """Estimate kcal burned with a single formula:
 
-    met_map = {
-        "compound": MET_VALUES["compound_medium"],
-        "isolation": MET_VALUES["isolation"],
-        "isometric": MET_VALUES["isometric"],
-        "cardio": MET_VALUES["cardio_medium"],
-        "stretch": MET_VALUES["stretch"],
-    }
-    met = met_map.get(exercise_type, 5.0)
-    duration_hours = duration_minutes / 60.0
-    return round(met * user_weight_kg * duration_hours, 1)
+        kcal = per_min_at_75kg × (user_weight_kg / 75) × duration_minutes
+
+    The curated per-exercise `calories_per_min` (kcal/min at 75kg) takes priority; otherwise
+    a per-type value on the SAME 75kg scale is used. Both paths share one formula so library
+    and non-library exercises are consistent — previously the MET fallback used a different
+    formula and overestimated non-library exercises by ~15-35% (H8).
+    """
+    per_min_75 = (
+        calories_per_min_override
+        if calories_per_min_override and calories_per_min_override > 0
+        else _PER_MIN_AT_75KG.get(exercise_type, _PER_MIN_AT_75KG["compound"])
+    )
+    weight = user_weight_kg if user_weight_kg and user_weight_kg > 0 else 75.0
+    return round(per_min_75 * (weight / 75.0) * max(0.0, duration_minutes), 1)

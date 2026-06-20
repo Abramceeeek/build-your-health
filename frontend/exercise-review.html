@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercise GIF Review</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #0f0f0f; color: #eee; }
+  header { padding: 16px 20px; background: #1a1a1a; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #333; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header span { font-size: 13px; color: #888; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-btn { padding: 5px 12px; border-radius: 20px; border: 1px solid #444; background: #222; color: #ccc; cursor: pointer; font-size: 13px; transition: all 0.15s; }
+  .filter-btn.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .search-box { padding: 5px 10px; border-radius: 8px; border: 1px solid #444; background: #222; color: #eee; font-size: 13px; min-width: 180px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; padding: 16px; }
+  .card { background: #1a1a1a; border-radius: 10px; overflow: hidden; border: 1px solid #2a2a2a; cursor: default; }
+  .card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #111; display: block; }
+  .card-body { padding: 10px; }
+  .card-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 10px; background: #2d3748; color: #90cdf4; }
+  .tag.type { background: #1a3a2a; color: #68d391; }
+  .badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #553; color: #fc8; margin-left: 4px; vertical-align: middle; }
+  .badge.gif { background: #1e3a5f; color: #63b3ed; }
+  .pagination { display: flex; justify-content: center; gap: 8px; padding: 20px; }
+  .pg-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid #444; background: #222; color: #ccc; cursor: pointer; font-size: 13px; }
+  .pg-btn:disabled { opacity: 0.4; cursor: default; }
+  .pg-info { padding: 6px 14px; color: #888; font-size: 13px; }
+  .no-img { background: #111; display: flex; align-items: center; justify-content: center; color: #555; font-size: 12px; }
+  .loading { text-align: center; padding: 60px; color: #666; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Exercise Review</h1>
+  <span id="total-label"></span>
+  <div class="filters" id="muscle-filters">
+    <button class="filter-btn active" data-muscle="">All</button>
+    <button class="filter-btn" data-muscle="chest">Chest</button>
+    <button class="filter-btn" data-muscle="back">Back</button>
+    <button class="filter-btn" data-muscle="legs">Legs</button>
+    <button class="filter-btn" data-muscle="shoulders">Shoulders</button>
+    <button class="filter-btn" data-muscle="biceps">Biceps</button>
+    <button class="filter-btn" data-muscle="triceps">Triceps</button>
+    <button class="filter-btn" data-muscle="abs">Abs</button>
+    <button class="filter-btn" data-muscle="calves">Calves</button>
+    <button class="filter-btn" data-muscle="forearms">Forearms</button>
+    <button class="filter-btn" data-muscle="neck">Neck</button>
+    <button class="filter-btn" data-muscle="rear_delts">Rear Delts</button>
+  </div>
+  <input class="search-box" type="text" id="search" placeholder="Search name…">
+</header>
+
+<div class="grid" id="grid"><div class="loading">Loading exercises…</div></div>
+
+<div class="pagination" id="pagination"></div>
+
+<script>
+const API = window.location.origin;
+let currentMuscle = '';
+let currentPage = 1;
+let searchTimer = null;
+let searchQuery = '';
+const PER_PAGE = 48;
+
+async function load() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '<div class="loading">Loading…</div>';
+
+  const params = new URLSearchParams({
+    page: currentPage,
+    per_page: PER_PAGE,
+  });
+  if (currentMuscle) params.set('muscle', currentMuscle);
+
+  let url = `${API}/api/exercises/admin/all?${params}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    let items = data.items || [];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(ex => ex.name.toLowerCase().includes(q));
+    }
+
+    document.getElementById('total-label').textContent =
+      `${data.total} exercises${currentMuscle ? ' · ' + currentMuscle : ''}`;
+
+    renderGrid(items);
+    renderPagination(data.total, data.page, data.per_page);
+  } catch (e) {
+    grid.innerHTML = `<div class="loading">Error: ${e.message}</div>`;
+  }
+}
+
+function imgUrl(ex) {
+  const url = ex.image_url;
+  if (!url) return null;
+  // Local GIFs and uploads served directly
+  if (url.startsWith('/uploads') || url.startsWith('/data')) return url;
+  // External URLs: fitnessprogramer / github raw / etc
+  return url;
+}
+
+function isGif(url) {
+  return url && url.endsWith('.gif');
+}
+
+function renderCard(ex) {
+  const url = imgUrl(ex);
+  const gif = isGif(url);
+  const card = document.createElement('div');
+  card.className = 'card';
+
+  const imgEl = url
+    ? `<img src="${url}" loading="lazy" alt="${ex.name}" onerror="this.parentNode.className='no-img card'; this.style.display='none'">`
+    : `<div class="no-img" style="height:150px">No image</div>`;
+
+  const muscles = (ex.muscle_groups || []).map(m =>
+    `<span class="tag">${m}</span>`
+  ).join('');
+  const type = ex.exercise_type
+    ? `<span class="tag type">${ex.exercise_type}</span>` : '';
+
+  card.innerHTML = `
+    ${imgEl}
+    <div class="card-body">
+      <div class="card-name">
+        ${ex.name}
+        <span class="badge ${gif ? 'gif' : ''}">${gif ? 'GIF' : 'JPG'}</span>
+      </div>
+      <div class="card-tags">${muscles}${type}</div>
+    </div>
+  `;
+  return card;
+}
+
+function renderGrid(items) {
+  const grid = document.getElementById('grid');
+  if (!items.length) {
+    grid.innerHTML = '<div class="loading">No exercises found.</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  items.forEach(ex => grid.appendChild(renderCard(ex)));
+}
+
+function renderPagination(total, page, perPage) {
+  const pages = Math.ceil(total / perPage);
+  const el = document.getElementById('pagination');
+  el.innerHTML = '';
+  if (pages <= 1) return;
+
+  const prev = document.createElement('button');
+  prev.className = 'pg-btn';
+  prev.textContent = '← Prev';
+  prev.disabled = page <= 1;
+  prev.onclick = () => { currentPage--; load(); };
+
+  const info = document.createElement('span');
+  info.className = 'pg-info';
+  info.textContent = `Page ${page} of ${pages}`;
+
+  const next = document.createElement('button');
+  next.className = 'pg-btn';
+  next.textContent = 'Next →';
+  next.disabled = page >= pages;
+  next.onclick = () => { currentPage++; load(); };
+
+  el.append(prev, info, next);
+}
+
+// Muscle filters
+document.getElementById('muscle-filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMuscle = btn.dataset.muscle;
+  currentPage = 1;
+  load();
+});
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchQuery = e.target.value.trim();
+  searchTimer = setTimeout(() => { currentPage = 1; load(); }, 300);
+});
+
+load();
+</script>
+</body>
+</html>

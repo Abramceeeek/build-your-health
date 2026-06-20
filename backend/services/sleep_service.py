@@ -5,6 +5,7 @@ Algorithm (SomnoAI-inspired):
     stage_score      30%  if wearable provides deep/REM pct; else redistributed
     efficiency_score 30%  bedtime consistency vs personal avg; else redistributed
 """
+import math
 from statistics import mean
 from typing import Optional
 
@@ -46,20 +47,29 @@ def calculate_sleep_score(
 
     # ── Bedtime consistency score (30% if available) ───────────────────────
     if bedtime and recent_bedtimes and len(recent_bedtimes) >= 3:
-        def _to_mins(t: str) -> int:
+        def _to_mins(t: str) -> Optional[int]:
             try:
                 h, m = map(int, t.split(":"))
-                mins = h * 60 + m
-                # treat early-morning times (0–6h) as post-midnight
-                return mins + 1440 if mins < 360 else mins
+                return (h * 60 + m) % 1440
             except Exception:
-                return 0
+                return None
 
-        past_mins = [_to_mins(t) for t in recent_bedtimes[-7:] if t]
-        if past_mins:
-            avg_mins  = mean(past_mins)
-            curr_mins = _to_mins(bedtime)
-            diff = abs(curr_mins - avg_mins)
+        past_mins = [v for v in (_to_mins(t) for t in recent_bedtimes[-7:]) if v is not None]
+        curr_mins = _to_mins(bedtime)
+        if past_mins and curr_mins is not None:
+            # Bedtimes lie on a 24h circle — use a circular mean/difference so that, e.g.,
+            # 23:30 and 00:30 are 60 min apart rather than ~23h. The old linear math added
+            # 1440 to pre-6am times and produced a large discontinuity for normal schedules
+            # that cross midnight, unfairly tanking consistency scores (M11).
+            angles = [m / 1440 * 2 * math.pi for m in past_mins]
+            mean_angle = math.atan2(
+                mean(math.sin(a) for a in angles),
+                mean(math.cos(a) for a in angles),
+            )
+            curr_angle = curr_mins / 1440 * 2 * math.pi
+            d = abs(curr_angle - mean_angle)
+            d = min(d, 2 * math.pi - d)          # shortest arc around the clock
+            diff = d / (2 * math.pi) * 1440       # back to minutes
             # ≤30 min diff = full score; every extra 30 min = −20 pts
             eff_score  = max(0.0, 100.0 - max(0.0, diff - 30) / 30 * 20)
             eff_weight = 0.30

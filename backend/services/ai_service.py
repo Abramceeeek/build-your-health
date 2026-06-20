@@ -2,6 +2,7 @@
 Multi-provider AI service — supports Gemini, OpenRouter, and Anthropic.
 Priority: Gemini API → OpenRouter → Anthropic (whichever key is configured).
 """
+import asyncio
 import json
 import logging
 from typing import Optional
@@ -10,6 +11,36 @@ import httpx
 from backend.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504}
+
+
+async def _post_json_with_retry(url, *, json=None, headers=None, timeout=60, max_attempts=3) -> dict:
+    """POST and return parsed JSON, retrying transient failures (timeouts, 429, 5xx) with
+    exponential backoff (H6). Non-retryable 4xx errors raise immediately; the last failure
+    re-raises after all attempts so the caller can fall back to the next provider."""
+    last_exc: Optional[Exception] = None
+    for attempt in range(max_attempts):
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, json=json, headers=headers)
+            if resp.status_code in _RETRYABLE_STATUS:
+                raise httpx.HTTPStatusError(
+                    f"retryable status {resp.status_code}", request=resp.request, response=resp
+                )
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as e:
+            # 4xx (other than 429) won't get better on retry — fail fast.
+            if e.response is not None and e.response.status_code not in _RETRYABLE_STATUS:
+                raise
+            last_exc = e
+        except (httpx.TimeoutException, httpx.TransportError) as e:
+            last_exc = e
+        if attempt < max_attempts - 1:
+            await asyncio.sleep(0.5 * (2 ** attempt))
+    assert last_exc is not None
+    raise last_exc
 
 
 async def call_ai(
@@ -49,10 +80,12 @@ async def call_ai_json(
     system_prompt: str,
     user_message: str,
     max_tokens: int = 8192,
+    required_keys: Optional[list] = None,
 ) -> Optional[dict]:
     """
     Call AI and parse JSON from the response.
-    Strips markdown code fences if present.
+    Strips markdown code fences if present. If `required_keys` is given and any is missing
+    (valid JSON but wrong shape), returns None so the caller falls back (M12).
     """
     raw = await call_ai(system_prompt, user_message, max_tokens)
     if not raw:
@@ -66,10 +99,14 @@ async def call_ai_json(
         text = text.split("```")[1].split("```")[0].strip()
 
     try:
-        return json.loads(text)
+        data = json.loads(text)
     except json.JSONDecodeError as e:
         logger.error("Failed to parse AI JSON: %s\nRaw: %s", e, text[:200])
         return None
+    if required_keys and (not isinstance(data, dict) or any(k not in data for k in required_keys)):
+        logger.warning("AI JSON missing required keys %s — using fallback", required_keys)
+        return None
+    return data
 
 
 # ─── GEMINI ──────────────────────────────────────────────────────────────────
@@ -86,13 +123,10 @@ async def _call_gemini(api_key: str, system_prompt: str, user_message: str, max_
         },
     }
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"]
+        data = await _post_json_with_retry(url, json=payload)
+        return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
-        logger.warning("Gemini call failed: %s", e)
+        logger.warning("Gemini call failed after retries: %s", e)
         return None
 
 
@@ -116,13 +150,10 @@ async def _call_openrouter(api_key: str, system_prompt: str, user_message: str, 
         "max_tokens": max_tokens,
     }
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"]
+        data = await _post_json_with_retry(url, json=payload, headers=headers)
+        return data["choices"][0]["message"]["content"]
     except Exception as e:
-        logger.warning("OpenRouter call failed: %s", e)
+        logger.warning("OpenRouter call failed after retries: %s", e)
         return None
 
 
@@ -132,7 +163,8 @@ async def _call_anthropic(api_key: str, system_prompt: str, user_message: str, m
     """Call Anthropic Claude API."""
     try:
         import anthropic as anthropic_lib  # type: ignore
-        client = anthropic_lib.Anthropic(api_key=api_key)
+        # The SDK retries transient errors (timeouts/429/5xx) with backoff internally.
+        client = anthropic_lib.Anthropic(api_key=api_key, max_retries=3)
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=max_tokens,
@@ -348,7 +380,8 @@ Analyze this week's data:
 - Exercises this week: {', '.join([w['exercise'] for w in context.get('weight_logs', [])[:5]])}
 Generate the weekly performance analysis.
 """
-    result = await call_ai_json(ANALYSIS_PROMPT, user_msg, max_tokens=1024)
+    result = await call_ai_json(ANALYSIS_PROMPT, user_msg, max_tokens=1024,
+                                required_keys=["overall_grade", "headline", "action_items"])
     if not result:
         rate = context.get("completion_rate", 0)
         grade = "A" if rate >= 85 else "B" if rate >= 70 else "C" if rate >= 50 else "D"
@@ -368,3 +401,17 @@ Generate the weekly performance analysis.
             ],
         }
     return result
+
+
+async def generate_weekly_review(context: dict) -> dict:
+    """Weekly analysis + 1-2 PubMed-cited tips (P4.2). Thin wrapper over the existing
+    weekly analysis; picks a research query from the weakest area."""
+    analysis = await generate_weekly_analysis(context)
+    from backend.services.pubmed_service import fetch_abstracts
+    query = (
+        "dietary protein intake muscle hypertrophy"
+        if (context.get("avg_daily_protein") or 0) < 100
+        else "progressive overload resistance training hypertrophy"
+    )
+    analysis["citations"] = await fetch_abstracts(query, max_results=2)
+    return analysis

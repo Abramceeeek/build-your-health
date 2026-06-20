@@ -49,6 +49,7 @@ def _resolve_targets(db: Session, user) -> dict:
             height_cm=metrics.height_cm,
             goals=reg.get("goals", []),
             gym_days_per_week=reg.get("gym_days_per_week"),
+            age=reg.get("age"),
         )
     return {}
 
@@ -57,10 +58,11 @@ router = APIRouter(prefix="/api/nutrition", tags=["nutrition"])
 
 @router.get("/search", response_model=list[FoodSearchResult])
 async def search_food(
-    q: str = Query(..., min_length=2),
+    q: str = Query(..., min_length=2, max_length=64),
     tg_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Cap query length so a giant string can't be fanned out to the external food APIs (M3).
     # Custom and local seeded foods matching query
     custom_foods = db.query(FoodCache).filter(
         FoodCache.source == "custom",
@@ -396,15 +398,13 @@ async def lookup_barcode(
 @router.post("/identify-photo")
 async def identify_food_photo(
     file: UploadFile = File(...),
-    tg_user: dict = Depends(get_current_user),
+    user=Depends(require_pro),
     db: Session = Depends(get_db),
 ):
     """Identify foods in a photo using Claude vision and return macros per item.
 
-    Rate limited to 10 requests per hour per user.
+    Pro-gated (Claude vision is a paid call) and rate limited to 10 requests/hour/user (M2).
     """
-    user = get_or_create_user(db, tg_user)
-
     if not check_rate_limit(user.id, "food_photo_identify", max_calls=10):
         raise HTTPException(status_code=429, detail="Rate limit: 10 food photo identifications per hour.")
 

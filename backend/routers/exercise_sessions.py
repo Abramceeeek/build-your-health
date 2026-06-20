@@ -79,9 +79,22 @@ async def finish_session(
     session = db.query(ExerciseSession).filter(
         ExerciseSession.id == session_id,
         ExerciseSession.user_id == user.id,
-    ).first()
+    ).with_for_update().first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.finished_at is not None:
+        # Idempotent: a second finish (double-submit / network retry) must NOT re-award XP,
+        # re-add exercise calories, or re-log volume (H13). The row lock above serializes
+        # concurrent finishes of the same session so this check is race-safe.
+        return {
+            "session_id": session_id,
+            "status": "already_completed",
+            "exercise_name": session.exercise_name,
+            "calories_burned": session.calories_burned,
+            "xp_earned": 0,
+            "total_xp": user.xp,
+        }
 
     # Get user's weight for calorie calculation
     latest_metrics = db.query(UserMetrics).filter(
@@ -149,6 +162,13 @@ async def finish_session(
         db.add(health_log)
 
     db.commit()
+
+    # Track volume load for deload detection (non-fatal if it errors)
+    try:
+        from backend.services.volume_service import update_volume_log
+        update_volume_log(db, user.id, session)
+    except Exception:
+        pass
 
     return {
         "session_id": session_id,

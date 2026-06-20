@@ -1,3 +1,14 @@
+// HTML-escape untrusted strings (Telegram display names, server/API text, URL params)
+// before inserting into innerHTML. Safe for text and quoted-attribute contexts (M4/M5).
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ─── USER UI ────────────────────────────────────
 function updateUserUI() {
   if (!currentUser) return;
@@ -134,13 +145,13 @@ async function loadLeaderboard(compId) {
     listEl.innerHTML = entries.map((e, i) => {
       const rankStr = i < 3 ? rankIcons[i] : String(i + 1);
       const color = COLORS[Math.abs(e.telegram_id) % COLORS.length];
-      const initials = (e.first_name || '?')[0].toUpperCase();
+      const initials = escHtml((e.first_name || '?')[0].toUpperCase());
 
       return `<div class="lb-row${e.is_self ? ' is-self' : ''}">
         <div class="lb-rank ${rankCls[i] || ''}">${rankStr}</div>
         <div class="lb-avatar" style="background:${color}">${initials}</div>
         <div class="lb-info">
-          <div class="lb-name">${e.first_name}${e.is_self ? ' (you)' : ''}</div>
+          <div class="lb-name">${escHtml(e.first_name)}${e.is_self ? ' (you)' : ''}</div>
           <div class="lb-sub">${e.tasks_completed} tasks · ${e.completion_pct}%</div>
         </div>
         <div class="lb-score">${e.score}</div>
@@ -165,10 +176,10 @@ async function loadHighlights(compId) {
       section.style.display = 'block';
       list.innerHTML = data.highlights.map(h =>
         `<div class="highlight-item">
-          <div class="highlight-icon">${h.icon}</div>
+          <div class="highlight-icon">${escHtml(h.icon)}</div>
           <div class="highlight-info">
-            <div class="highlight-label">${h.label}</div>
-            <div class="highlight-name">${h.name} — ${h.value}</div>
+            <div class="highlight-label">${escHtml(h.label)}</div>
+            <div class="highlight-name">${escHtml(h.name)} — ${escHtml(h.value)}</div>
           </div>
         </div>`
       ).join('');
@@ -289,7 +300,7 @@ function showJoinComp(prefillCode) {
   openModal(`
     <h3 style="font-size:18px;font-weight:700;margin-bottom:16px">Join Competition</h3>
     <label class="input-label">Invite Code</label>
-    <input class="input-field" id="joinCode" placeholder="e.g., ABC12345" value="${prefillCode || ''}" style="margin-bottom:16px">
+    <input class="input-field" id="joinCode" placeholder="e.g., ABC12345" value="${escHtml(prefillCode)}" style="margin-bottom:16px">
     <button class="btn btn-primary" onclick="joinComp()">Join</button>
   `);
 }

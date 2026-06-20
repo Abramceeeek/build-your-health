@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 from backend.auth import get_current_user
@@ -50,7 +50,7 @@ class WearableSync(BaseModel):
 
 class CycleLogRequest(BaseModel):
     last_period_start: str   # YYYY-MM-DD
-    cycle_length: int = 28
+    cycle_length: int = Field(default=28, ge=15, le=60)  # service further clamps to 21–35
 
 
 def _log_to_dict(log: DailyHealthLog) -> dict:

@@ -38,7 +38,8 @@ class User(Base):
     memory_json = Column(JSON, default=None)
     sex = Column(String(10), default=None)          # "male" | "female" — backfilled from registration_data_json
     date_of_birth = Column(String(10), default=None)  # YYYY-MM-DD
-    sync_token = Column(String(64), default=None, unique=True)  # stable token for Apple Watch Shortcut auth
+    sync_token = Column(String(64), default=None, unique=True)  # SHA-256 hash of the Apple Watch Shortcut token (never plaintext)
+    referred_by = Column(Integer, default=None)  # referrer user id (set once on registration)
 
     photos = relationship("UserPhoto", back_populates="user", cascade="all, delete-orphan")
     plans = relationship("UserPlan", back_populates="user", cascade="all, delete-orphan")
@@ -59,6 +60,7 @@ class User(Base):
     readiness_scores = relationship("ReadinessScore", back_populates="user", cascade="all, delete-orphan")
     volume_logs = relationship("VolumeLoadLog", back_populates="user", cascade="all, delete-orphan")
     cycle_logs = relationship("CycleLog", back_populates="user", cascade="all, delete-orphan")
+    body_measurements = relationship("BodyMeasurementLog", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserPhoto(Base):
@@ -574,6 +576,24 @@ class Subscription(Base):
     provider = Column(String(20), default="")        # stars | stripe | manual
     provider_sub_id = Column(String(100), default="")
     updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class BodyMeasurementLog(Base):
+    __tablename__ = "body_measurement_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    key = Column(String(80), nullable=False)   # e.g. "bicep_flexed_left", "waist_navel"
+    value = Column(Float, nullable=False)
+    date = Column(String(10), nullable=False)  # YYYY-MM-DD
+    created_at = Column(DateTime, default=utcnow)
+
+    user = relationship("User", back_populates="body_measurements")
+
+    __table_args__ = (
+        Index("ix_bml_user_key", "user_id", "key"),
+        Index("ix_bml_user_date", "user_id", "date"),
+    )
 
 
 _engine = None

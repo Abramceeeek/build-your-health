@@ -618,9 +618,11 @@ async def toggle_task(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
+    # Row lock serializes concurrent toggles of the same task so XP can't be double-awarded
+    # or lost across a double-click / multi-device race (M17). No-op on SQLite, locks on PG.
     task = db.query(DailyTask).filter(
         DailyTask.id == task_id, DailyTask.user_id == user.id
-    ).first()
+    ).with_for_update().first()
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")

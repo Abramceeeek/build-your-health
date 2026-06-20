@@ -156,14 +156,52 @@ async def get_shortcut_token(
     tg_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return (or generate) a stable sync token for the Apple Watch Shortcut."""
-    from backend.auth import generate_sync_token
-    from backend.models.database import User
+    """Generate a fresh sync token for the Apple Watch Shortcut.
+
+    Only the SHA-256 hash is stored server-side; the plaintext is returned once here and
+    cannot be retrieved again. Each call ROTATES the token — any previously issued token
+    stops working (P2.2, force-rotate).
+    """
+    from backend.auth import generate_sync_token, hash_sync_token
     user = get_or_create_user(db, tg_user)
-    if not user.sync_token:
-        user.sync_token = generate_sync_token()
-        db.commit()
-    return {"sync_token": user.sync_token}
+    token = generate_sync_token()
+    user.sync_token = hash_sync_token(token)
+    db.commit()
+    return {"sync_token": token}
+
+
+@router.get("/me/export")
+async def export_my_data(tg_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """GDPR: return all of this user's stored data as JSON."""
+    from backend.models.database import Base
+    user = get_or_create_user(db, tg_user)
+    uid = user.id
+    out: dict = {}
+    for table in Base.metadata.sorted_tables:
+        if table.name == "users":
+            rows = db.execute(table.select().where(table.c.id == uid)).mappings().all()
+        elif "user_id" in table.c:
+            rows = db.execute(table.select().where(table.c.user_id == uid)).mappings().all()
+        else:
+            continue
+        if rows:
+            out[table.name] = [dict(r) for r in rows]
+    return out
+
+
+@router.delete("/me")
+async def delete_my_account(tg_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
+    """GDPR: permanently delete this user and every row referencing them."""
+    from backend.models.database import Base
+    user = get_or_create_user(db, tg_user)
+    uid = user.id
+    # Children first (reverse FK order), then the user row.
+    for table in reversed(Base.metadata.sorted_tables):
+        if "user_id" in table.c:
+            db.execute(table.delete().where(table.c.user_id == uid))
+    db.execute(Base.metadata.tables["users"].delete().where(Base.metadata.tables["users"].c.id == uid))
+    db.commit()
+    return {"status": "deleted"}
 
 
 @router.get("/me/bio-age", response_model=BioAgeOut)
@@ -209,6 +247,7 @@ async def register_user(
     user = get_or_create_user(db, tg_user)
     user.is_registered = True
     user.registration_completed_at = datetime.now(timezone.utc)
+    user.sex = data.gender  # populate the column (used by bio-age norms + cycle gating)
     user.registration_data_json = {
         "gender": data.gender,
         "goals": data.goals,
@@ -220,6 +259,7 @@ async def register_user(
         "gym_specific_days": data.gym_specific_days,
         "gym_every_n_days": data.gym_every_n_days,
         "muscle_schedule": data.muscle_schedule,
+        "age": data.age,
     }
     if data.height_cm or data.weight_kg:
         metrics = UserMetrics(
@@ -237,6 +277,7 @@ async def register_user(
             height_cm=data.height_cm,
             goals=data.goals,
             gym_days_per_week=data.gym_days_per_week,
+            age=data.age,
         )
         week_start = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         db.add(NutritionTarget(user_id=user.id, week_start=week_start, **t))
@@ -244,8 +285,18 @@ async def register_user(
     db.commit()
 
     # Grant 14-day Pro trial on first registration
-    from backend.routers.subscriptions import _grant_trial
+    from backend.routers.subscriptions import _grant_trial, grant_referral_reward
     _grant_trial(db, user.id)
+
+    # Referral: first-time referee → reward both referee and referrer (once).
+    if data.referred_by and not user.referred_by and data.referred_by != user.id:
+        from backend.models.database import User
+        referrer = db.query(User).filter(User.id == data.referred_by).first()
+        if referrer:
+            user.referred_by = referrer.id
+            db.commit()
+            grant_referral_reward(db, user.id)
+            grant_referral_reward(db, referrer.id)
 
     # Generate a plan for the current week immediately (mid-week registration fix)
     user_id = user.id
@@ -327,6 +378,7 @@ async def update_registration(
     from the updated muscle_schedule via generate_default_tasks_for_day.
     """
     user = get_or_create_user(db, tg_user)
+    user.sex = data.gender
     user.registration_data_json = {
         "gender": data.gender,
         "goals": data.goals,
@@ -338,6 +390,7 @@ async def update_registration(
         "gym_specific_days": data.gym_specific_days,
         "gym_every_n_days": data.gym_every_n_days,
         "muscle_schedule": data.muscle_schedule,
+        "age": data.age,
     }
 
     from backend.models.database import DailyTask
@@ -390,3 +443,18 @@ async def suggest_split(
         gym_days=data.gym_days,
     )
     return result
+
+
+@router.post("/reset-account")
+async def reset_account(
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Clear registration so the user goes through onboarding again."""
+    user = get_or_create_user(db, tg_user)
+    user.is_registered = False
+    user.registration_data_json = None
+    user.registration_completed_at = None
+    db.commit()
+    return {"reset": True}
+

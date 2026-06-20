@@ -25,11 +25,23 @@ from backend.dependencies.auth_deps import get_db, get_or_create_user
 from backend.models.database import (
     CoachMessage, DailyTask, ExerciseWeightLog, User,
 )
+from backend.dependencies.paywall import require_pro
 from backend.rate_limit import check_rate_limit
 from backend.services.pubmed_service import is_advice_query, fetch_abstracts, build_research_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/coach", tags=["coach"])
+
+
+@router.get("/weekly-review")
+async def weekly_review(user=Depends(require_pro), db: Session = Depends(get_db)):
+    """Pro weekly review: AI recap of the week + 1-2 PubMed-cited tips (P4.2)."""
+    if not check_rate_limit(user.id, "weekly_review", max_calls=10):
+        raise HTTPException(status_code=429, detail="Rate limit: 10 reviews per hour.")
+    from backend.services.scheduler import collect_user_context
+    from backend.services.ai_service import generate_weekly_review
+    context = collect_user_context(db, user)
+    return {"review": await generate_weekly_review(context)}
 
 INJURY_RE = re.compile(
     r"\b(hurt|pain|sore|tweaked|injur(?:y|ed)|strain(?:ed)?|pulled|ache|aching|stiff|swollen|throb)\b",

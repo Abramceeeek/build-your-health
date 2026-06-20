@@ -145,12 +145,24 @@ const API = {
   // Biological age
   getBioAge: () => api('/api/users/me/bio-age'),
 
+  // Weekly AI review (Pro)
+  getWeeklyReview: () => api('/api/coach/weekly-review'),
+
   // Apple Watch / wearable sync
   getShortcutToken: () => api('/api/users/me/shortcut-token'),
   wearableSync: (data) => api('/api/health/wearable-sync', { method: 'POST', body: JSON.stringify(data) }),
 
   // Barcode lookup
   lookupBarcode: (barcode) => api(`/api/nutrition/barcode/${encodeURIComponent(barcode)}`),
+
+  // Body measurements
+  logMeasurements: (entries) => api('/api/measurements/log', { method: 'POST', body: JSON.stringify({ entries }) }),
+  getLatestMeasurements: () => api('/api/measurements/latest'),
+  getMeasurementHistory: (key) => api(`/api/measurements/history/${encodeURIComponent(key)}`),
+  deleteMeasurement: (id) => api(`/api/measurements/${id}`, { method: 'DELETE' }),
+
+  // Account
+  resetAccount: () => api('/api/users/reset-account', { method: 'POST' }),
 
   // Cycle tracking
   logPeriod: (data) => api('/api/health/cycle/log-period', { method: 'POST', body: JSON.stringify(data) }),

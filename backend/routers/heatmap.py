@@ -102,10 +102,12 @@ async def get_calendar_data(
         if pct == 100:
             perfect_days += 1
 
+    # Step by real calendar months (not 30-day windows, which drift against variable
+    # month lengths and silently drop/duplicate months — M13).
     month_summaries = []
-    for m in range(months):
-        month_date = today - timedelta(days=m * 30)
-        month_str = month_date.strftime("%Y-%m")
+    y, mo = today.year, today.month
+    for _ in range(months):
+        month_str = f"{y:04d}-{mo:02d}"
         month_days = {k: v for k, v in days.items() if k.startswith(month_str)}
         month_done = sum(d["done"] for d in month_days.values())
         month_total = sum(d["total"] for d in month_days.values())
@@ -116,6 +118,9 @@ async def get_calendar_data(
             "pct": round(month_done / month_total * 100) if month_total else 0,
             "days_active": len([d for d in month_days.values() if d["done"] > 0]),
         })
+        mo -= 1
+        if mo == 0:
+            mo, y = 12, y - 1
 
     return {
         "days": days,
