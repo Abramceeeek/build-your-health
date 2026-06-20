@@ -48,6 +48,10 @@ if (!HAS_TELEGRAM && !IS_LOCAL) {
 
 // ─── INIT ───────────────────────────────────────
 async function init() {
+  // Persist the device timezone (fire-and-forget) so "today", streaks, heatmap and reminders
+  // follow the user's local calendar day. getTimezoneOffset() is minutes behind UTC, so negate.
+  API.setTimezone(-new Date().getTimezoneOffset()).catch(() => {});
+
   // Check registration & truth gate
   try {
     const status = await API.getRegistrationStatus();
