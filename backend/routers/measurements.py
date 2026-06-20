@@ -7,6 +7,7 @@ from datetime import date as date_type
 from backend.auth import get_current_user
 from backend.routers.users import get_db, get_or_create_user
 from backend.models.database import BodyMeasurementLog
+from backend.services.time_service import user_today_str
 
 router = APIRouter(prefix="/api/measurements", tags=["measurements"])
 
@@ -28,7 +29,7 @@ async def log_measurements(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
-    today = str(date_type.today())
+    today = user_today_str(user)
     created = []
     for e in body.entries:
         log = BodyMeasurementLog(

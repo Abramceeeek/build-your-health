@@ -28,6 +28,7 @@ from backend.models.database import (
 from backend.dependencies.paywall import require_pro
 from backend.rate_limit import check_rate_limit
 from backend.services.pubmed_service import is_advice_query, fetch_abstracts, build_research_context
+from backend.services.time_service import user_today_str
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/coach", tags=["coach"])
@@ -80,10 +81,6 @@ class MessageRequest(BaseModel):
     body: str = Field(..., min_length=1, max_length=2000)
 
 
-def _today_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
-
-
 def _opener_for(user_id: int, pool: list[str]) -> str:
     return pool[user_id % len(pool)]
 
@@ -95,7 +92,7 @@ async def coach_today(
 ):
     """Templated morning + evening brief for today. No LLM call."""
     user = get_or_create_user(db, tg_user)
-    today = _today_str()
+    today = user_today_str(user)
 
     tasks = db.query(DailyTask).filter(
         DailyTask.user_id == user.id, DailyTask.date == today,

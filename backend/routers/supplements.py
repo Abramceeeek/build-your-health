@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from backend.auth import get_current_user
 from backend.routers.users import get_db, get_or_create_user
 from backend.models.database import SupplementLog
+from backend.services.time_service import user_today_str
 
 router = APIRouter(prefix="/api/supplements", tags=["supplements"])
 
@@ -104,7 +105,7 @@ async def log_supplement(
     if not catalog_item:
         raise HTTPException(status_code=400, detail=f"Unknown supplement: {data.supplement_key}")
 
-    date_str = data.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = data.date or user_today_str(user)
     dose = data.dose_g if data.dose_g is not None else catalog_item["default_dose_g"]
 
     log = SupplementLog(

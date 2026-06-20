@@ -10,6 +10,7 @@ from backend.models.database import (
 )
 from backend.models.schemas import AchievementResponse, HabitCreate, HabitResponse
 from backend.services.badge_service import check_and_award_badges
+from backend.services.time_service import user_local_now, user_today_str
 
 router = APIRouter(prefix="/api/progress", tags=["progress"])
 
@@ -85,8 +86,8 @@ async def update_streak(
 ):
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    today = user_today_str(user)
+    yesterday = (user_local_now(user) - timedelta(days=1)).strftime("%Y-%m-%d")
 
     today_tasks = db.query(DailyTask).filter(
         DailyTask.user_id == user.id, DailyTask.date == today
@@ -102,7 +103,7 @@ async def update_streak(
         user.last_active_date = today
     elif user.last_active_date != yesterday and today_pct >= 50:
         if user.streak_freezes > 0:
-            two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).strftime("%Y-%m-%d")
+            two_days_ago = (user_local_now(user) - timedelta(days=2)).strftime("%Y-%m-%d")
             if user.last_active_date == two_days_ago:
                 user.streak_freezes -= 1
                 user.streak_days += 1
@@ -236,7 +237,7 @@ async def create_habit(
     db.commit()
     db.refresh(habit)
 
-    today = datetime.now(timezone.utc).date()
+    today = user_local_now(user).date()
     quit = datetime.strptime(habit.quit_date, "%Y-%m-%d").date()
     days_since = (today - quit).days
 
@@ -260,7 +261,7 @@ async def get_habits(
         HabitTracker.is_active == True,
     ).all()
 
-    today = datetime.now(timezone.utc).date()
+    today = user_local_now(user).date()
     results = []
     for h in habits:
         quit = datetime.strptime(h.quit_date, "%Y-%m-%d").date()
@@ -302,7 +303,7 @@ async def get_dashboard(
 ):
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     today_str = today.strftime("%Y-%m-%d")
 
     today_tasks = db.query(DailyTask).filter(

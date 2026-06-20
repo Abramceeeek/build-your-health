@@ -9,6 +9,7 @@ from backend.routers.users import get_db, get_or_create_user
 from backend.models.database import DailyTask, ExerciseLibrary, User, UserPlan
 from backend.models.schemas import TaskResponse, DayTasksResponse, TaskToggle
 from backend.services.workout_templates import WORKOUT_TEMPLATES, get_template_exercises
+from backend.services.time_service import user_local_now, user_today_str
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
@@ -395,7 +396,7 @@ async def get_today_tasks(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = user_today_str(user)
     return _get_day_tasks(db, user, today)
 
 
@@ -425,7 +426,7 @@ async def get_week_tasks(
     Both params are clamped to [0, 14] to keep DB load bounded.
     """
     user = get_or_create_user(db, tg_user)
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
 
     days_before = max(0, min(int(days_before or 0), 14))
     days_after  = max(0, min(int(days_after  or 0), 14))
@@ -769,7 +770,7 @@ async def regenerate_week(
 ):
     """Delete uncompleted tasks from today onwards so they regenerate with updated preferences."""
     user = get_or_create_user(db, tg_user)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = user_today_str(user)
 
     # Delete uncompleted tasks from today onwards
     tasks_to_delete = db.query(DailyTask).filter(

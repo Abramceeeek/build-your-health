@@ -10,6 +10,7 @@ from backend.models.schemas import PlanGenerateRequest, PlanResponse
 from backend.services.claude_service import analyze_photos, generate_plan
 from backend.services.plan_generator import create_tasks_from_plan
 from backend.services.ai_context import build_ai_context
+from backend.services.time_service import user_local_now
 
 router = APIRouter(prefix="/api/plans", tags=["plans"])
 
@@ -104,7 +105,7 @@ async def generate_new_plan(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {str(e)}")
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     monday = today - timedelta(days=today.weekday())
     week_start = monday.strftime("%Y-%m-%d")
 
