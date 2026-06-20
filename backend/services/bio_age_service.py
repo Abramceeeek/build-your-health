@@ -13,6 +13,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from backend.services.time_service import user_local_now
+
 # VO2max norms (ml/kg/min) by sex and decade, from HUNT study
 _VO2MAX_NORMS: dict[str, dict[str, float]] = {
     "male":   {"20s": 44, "30s": 42, "40s": 39, "50s": 35, "60s": 30},
@@ -53,7 +55,7 @@ def compute_bio_age(user, db: Session) -> Optional[dict]:
     if user.date_of_birth:
         try:
             dob = date.fromisoformat(user.date_of_birth)
-            today = date.today()
+            today = user_local_now(user).date()
             age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         except ValueError:
             pass

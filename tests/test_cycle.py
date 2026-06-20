@@ -30,7 +30,7 @@ def test_current_phase_day_one_is_menstrual(db):
     db.add(u)
     db.commit()
     log_period(u.id, date.today().isoformat(), 28, db)
-    phase = get_current_phase(u.id, db)
+    phase = get_current_phase(u, db)
     assert phase["phase"] == "menstrual"
     assert phase["day_of_cycle"] == 1
     assert phase["cycle_length"] == 28
@@ -40,4 +40,4 @@ def test_no_log_returns_none(db):
     u = User(telegram_id=3, first_name="T")
     db.add(u)
     db.commit()
-    assert get_current_phase(u.id, db) is None
+    assert get_current_phase(u, db) is None

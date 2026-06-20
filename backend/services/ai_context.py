@@ -8,6 +8,7 @@ from backend.models.database import (
     NutritionLog, ExerciseWeightLog, DailyTask, UserMetrics, User,
     ReadinessScore,
 )
+from backend.services.time_service import user_today_str
 
 
 def build_ai_context(db: Session, user_id: int) -> str:
@@ -21,11 +22,14 @@ def build_ai_context(db: Session, user_id: int) -> str:
         memory_block = format_memory_for_prompt(user)
         if memory_block:
             sections.append(memory_block)
+    # UTC base for the relative N-day lookback WINDOWS below (week_ago/two_weeks_ago);
+    # off-by-a-day on a window's lower bound is negligible. The "today" upper-bound
+    # anchor, however, follows the user's local calendar day for accuracy.
     today = datetime.now(timezone.utc)
+    today_str = user_today_str(user)
 
     # ─── NUTRITION (last 7 days) ─────────────────────
     week_ago = (today - timedelta(days=7)).strftime("%Y-%m-%d")
-    today_str = today.strftime("%Y-%m-%d")
 
     nutrition_logs = db.query(
         NutritionLog.date,
@@ -135,7 +139,7 @@ def build_ai_context(db: Session, user_id: int) -> str:
 
         # Deload check
         from backend.services.volume_service import check_deload_needed
-        deload_needed = check_deload_needed(db, user_id)
+        deload_needed = check_deload_needed(db, user_id, user=user)
         low_readiness = avg_readiness < 50
         if deload_needed or low_readiness:
             reason = []
