@@ -38,3 +38,41 @@ jobs:
           python -m alembic upgrade head
           python -m alembic check
           python -m alembic downgrade base
+
+  # Proves migrations + ORM are Postgres-compatible before the production SQLite->Postgres
+  # cutover (ARCHITECTURE_REVIEW #2). Catches SQLite-only DDL that the sqlite job can't.
+  migrations-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: health_transform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies (pinned lock)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
+
+      - name: Migrations apply + no ORM drift on Postgres
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/health_transform
+        run: |
+          python -m alembic upgrade head
+          python -m alembic check
+          python -m alembic downgrade base
