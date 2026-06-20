@@ -3455,3 +3455,24 @@ select.gate-input option { background: #1c1c1e; color: #fff; }
   transition: all .15s ease;
 }
 .rpe-chip.active { border-color: var(--blue); color: var(--text-primary); background: rgba(40,110,255,0.18); }
+
+/* ===== RESPONSIVE: center the phone-width app as a column on tablet/laptop/iPad ===== */
+/* The app is designed mobile-first; on wide screens we letterbox it into a centered column
+   instead of stretching, so it's clean and usable on a laptop or iPad. */
+@media (min-width: 600px) {
+  html { background: #000; }
+  body {
+    max-width: 480px;
+    margin-inline: auto;
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.7);
+  }
+  /* Fixed elements are viewport-anchored — re-center them over the column. */
+  .bottom-tabs {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 480px;
+  }
+  .side-menu { left: calc(50% - 240px); }
+}
