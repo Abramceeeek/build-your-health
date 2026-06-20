@@ -43,6 +43,7 @@ class User(Base):
     sync_token = Column(String(64), default=None, unique=True)  # SHA-256 hash of the Apple Watch Shortcut token (never plaintext)
     referred_by = Column(Integer, default=None)  # referrer user id (set once on registration)
     timezone_offset = Column(Integer, nullable=False, server_default="0", default=0)  # minutes east of UTC; 0 = UTC
+    nudge_log_json = Column(JSON, default=None)  # {scheduler_job_id: "YYYY-MM-DD"} last local day each daily nudge fired
 
     photos = relationship("UserPhoto", back_populates="user", cascade="all, delete-orphan")
     plans = relationship("UserPlan", back_populates="user", cascade="all, delete-orphan")
