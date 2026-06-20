@@ -9,6 +9,7 @@ from backend.auth import get_current_user
 from backend.routers.users import get_db, get_or_create_user
 from backend.models.database import DailyTask, UserMetrics
 from backend.services.scoring import get_muscle_heatmap
+from backend.services.time_service import local_from_utc, user_local_now
 
 router = APIRouter(prefix="/api/heatmap", tags=["heatmap"])
 
@@ -47,7 +48,7 @@ async def get_weekly_heatmap(
 ):
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     monday = today - timedelta(days=today.weekday())
     monday_str = monday.strftime("%Y-%m-%d")
     sunday_str = (monday + timedelta(days=6)).strftime("%Y-%m-%d")
@@ -83,7 +84,7 @@ async def get_calendar_data(
     """
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     start_date = today - timedelta(days=months * 31)
     start_str = start_date.strftime("%Y-%m-%d")
     today_str = today.strftime("%Y-%m-%d")
@@ -150,11 +151,13 @@ async def get_progress_timeline(
     """Return weekly progress summaries for the timeline view."""
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
 
     # Anchor timeline to user's actual registration date — no phantom weeks before signup.
+    # Convert the stored UTC timestamp to the user's local day so it lines up with the
+    # user-local week boundaries computed below.
     reg_date = user.registration_completed_at or user.joined_at
-    reg_str = reg_date.strftime("%Y-%m-%d") if reg_date else None
+    reg_str = local_from_utc(reg_date, user).strftime("%Y-%m-%d") if reg_date else None
 
     weeks = []
 

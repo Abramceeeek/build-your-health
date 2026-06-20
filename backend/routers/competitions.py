@@ -13,6 +13,7 @@ from backend.models.database import (
 from backend.models.schemas import (
     CompetitionCreate, CompetitionJoin, CompetitionResponse, LeaderboardEntry,
 )
+from backend.services.time_service import user_local_now, user_today_str
 
 router = APIRouter(prefix="/api/competitions", tags=["competitions"])
 
@@ -100,7 +101,7 @@ async def create_competition(
         raise HTTPException(status_code=400, detail="Competition name must be 2-50 characters")
     req.name = req.name.strip()
 
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     if req.comp_type == "weekly":
         duration = 7
     elif req.comp_type == "monthly":
@@ -110,7 +111,7 @@ async def create_competition(
     else:
         duration = 7
 
-    start_date = today.strftime("%Y-%m-%d")
+    start_date = user_today_str(user)
     end_date = (today + timedelta(days=duration - 1)).strftime("%Y-%m-%d")
 
     comp = Competition(
@@ -200,7 +201,7 @@ async def get_my_competitions(
         CompetitionMember.user_id == user.id,
     ).all()
 
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = user_today_str(user)  # match the user-local dates stored on create
     results = []
     for m in memberships:
         comp = db.query(Competition).filter(Competition.id == m.competition_id).first()

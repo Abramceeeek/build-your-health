@@ -7,6 +7,7 @@ from typing import Optional
 from backend.auth import get_current_user
 from backend.routers.users import get_db, get_or_create_user
 from backend.models.database import DailyHealthLog, ReadinessScore, User
+from backend.services.time_service import user_local_now, user_today_str
 
 router = APIRouter(prefix="/api/health", tags=["health"])
 
@@ -118,7 +119,7 @@ async def get_health_today(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = user_today_str(user)
     log = _get_or_create_log(db, user.id, today_str)
     return _log_to_dict(log)
 
@@ -130,7 +131,7 @@ async def update_health(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = user_today_str(user)
     log = _get_or_create_log(db, user.id, today_str)
 
     if data.water_glasses is not None:
@@ -179,7 +180,7 @@ async def patch_wearable_today(
 ):
     """Save wearable / manual activity data for today."""
     user = get_or_create_user(db, tg_user)
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today_str = user_today_str(user)
     log = _get_or_create_log(db, user.id, today_str)
 
     if data.steps is not None:
@@ -214,7 +215,7 @@ async def get_health_history(
 ):
     user = get_or_create_user(db, tg_user)
     days = min(days, 90)
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     start_str = (today - timedelta(days=days)).strftime("%Y-%m-%d")
     today_str = today.strftime("%Y-%m-%d")
 
@@ -278,7 +279,7 @@ async def get_readiness_history(
     """Return last N days of readiness scores for charting."""
     user = get_or_create_user(db, tg_user)
     days = min(days, 30)
-    today = datetime.now(timezone.utc)
+    today = user_local_now(user)
     start_str = (today - timedelta(days=days)).strftime("%Y-%m-%d")
 
     rows = db.query(ReadinessScore).filter(
@@ -314,7 +315,7 @@ async def wearable_sync(
     Returns confirmation with updated scores.
     """
     user = get_or_create_user(db, tg_user)
-    date_str = data.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    date_str = data.date or user_today_str(user)
     log = _get_or_create_log(db, user.id, date_str)
 
     if data.steps is not None:

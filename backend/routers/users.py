@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from io import BytesIO
 import os
 
+from backend.services.time_service import local_from_utc, user_local_now, user_today_str
+
 from PIL import Image, UnidentifiedImageError
 
 from backend.auth import get_current_user
@@ -37,7 +39,7 @@ async def get_my_stats(tg_user: dict = Depends(get_current_user), db: Session = 
     from backend.models.database import DailyTask
     user = get_or_create_user(db, tg_user)
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = user_today_str(user)
     today_tasks = db.query(DailyTask).filter(
         DailyTask.user_id == user.id, DailyTask.date == today
     ).all()
@@ -46,7 +48,8 @@ async def get_my_stats(tg_user: dict = Depends(get_current_user), db: Session = 
     total_today = len(today_tasks)
 
     from datetime import timedelta
-    week_start = datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())
+    user_now = user_local_now(user)
+    week_start = user_now - timedelta(days=user_now.weekday())
     week_start_str = week_start.strftime("%Y-%m-%d")
     week_tasks = db.query(DailyTask).filter(
         DailyTask.user_id == user.id, DailyTask.date >= week_start_str
@@ -227,14 +230,34 @@ async def get_registration_status(
     db: Session = Depends(get_db),
 ):
     user = get_or_create_user(db, tg_user)
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = user_today_str(user)
     truth_confirmed = False
     if user.last_truth_confirmed_at:
-        truth_confirmed = user.last_truth_confirmed_at.strftime("%Y-%m-%d") == today
+        truth_confirmed = local_from_utc(user.last_truth_confirmed_at, user).strftime("%Y-%m-%d") == today
     return RegistrationStatusResponse(
         is_registered=user.is_registered,
         truth_confirmed_today=truth_confirmed,
     )
+
+
+class TimezoneUpdate(BaseModel):
+    offset_minutes: int  # minutes east of UTC (e.g. -300 = UTC-5, 330 = UTC+5:30)
+
+
+@router.put("/me/timezone")
+async def set_timezone(
+    data: TimezoneUpdate,
+    tg_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Store the user's UTC offset so 'today', streaks, heatmap and reminders follow their
+    local calendar day. Clients send their device offset (e.g. -new Date().getTimezoneOffset())."""
+    if not (-12 * 60 <= data.offset_minutes <= 14 * 60):
+        raise HTTPException(status_code=422, detail="offset_minutes out of range")
+    user = get_or_create_user(db, tg_user)
+    user.timezone_offset = data.offset_minutes
+    db.commit()
+    return {"timezone_offset": user.timezone_offset, "local_date": user_today_str(user)}
 
 
 @router.post("/register")
@@ -279,7 +302,7 @@ async def register_user(
             gym_days_per_week=data.gym_days_per_week,
             age=data.age,
         )
-        week_start = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        week_start = user_today_str(user)
         db.add(NutritionTarget(user_id=user.id, week_start=week_start, **t))
 
     db.commit()
@@ -321,7 +344,7 @@ async def _generate_plan_for_new_user(user_id: int) -> None:
         if not user:
             return
         # Current ISO week Monday
-        today = datetime.now(timezone.utc)
+        today = user_local_now(user)
         monday = today - timedelta(days=today.weekday())
         week_start = monday.strftime("%Y-%m-%d")
         await generate_user_weekly_plan(db, user, week_start)
@@ -394,7 +417,7 @@ async def update_registration(
     }
 
     from backend.models.database import DailyTask
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    today = user_today_str(user)
     deleted = db.query(DailyTask).filter(
         DailyTask.user_id == user.id,
         DailyTask.date >= today,
