@@ -387,7 +387,7 @@ async def get_cycle_phase(
     """Return current cycle phase and training adjustments."""
     user = get_or_create_user(db, tg_user)
     from backend.services.cycle_service import get_current_phase
-    phase_info = get_current_phase(user.id, db)
+    phase_info = get_current_phase(user, db)
     if phase_info is None:
         return {"phase": None, "message": "No cycle log found. Log your last period start to enable this feature."}
     return phase_info

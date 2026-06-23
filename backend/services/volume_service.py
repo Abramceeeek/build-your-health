@@ -17,6 +17,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from backend.models.database import ExerciseSession, ExerciseLibrary, VolumeLoadLog
+from backend.services.time_service import user_local_now
 
 _PUSH_TAGS = {"push", "chest", "shoulder", "triceps"}
 _PULL_TAGS = {"pull", "back", "biceps"}
@@ -91,9 +92,12 @@ def update_volume_log(db: Session, user_id: int, session: ExerciseSession) -> No
     db.commit()
 
 
-def check_deload_needed(db: Session, user_id: int) -> bool:
-    """Return True if any muscle group this week exceeds 115% of its 3-week average."""
-    today = datetime.utcnow()
+def check_deload_needed(db: Session, user_id: int, user=None) -> bool:
+    """Return True if any muscle group this week exceeds 115% of its 3-week average.
+
+    `user` (optional) anchors "current week" on the user's local day; falls back to UTC.
+    """
+    today = user_local_now(user)
     current_week = _week_start(today.strftime("%Y-%m-%d"))
 
     current_rows = db.query(VolumeLoadLog).filter(

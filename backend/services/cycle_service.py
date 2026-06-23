@@ -11,6 +11,8 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from backend.services.time_service import user_local_now
+
 MIN_CYCLE_LENGTH = 21
 MAX_CYCLE_LENGTH = 35
 DEFAULT_CYCLE_LENGTH = 28
@@ -63,11 +65,14 @@ def _determine_phase(day: int, cycle_length: int) -> str:
     return "luteal"
 
 
-def get_current_phase(user_id: int, db: Session) -> Optional[dict]:
-    """Return current cycle phase info for the user. None if no log exists."""
+def get_current_phase(user, db: Session) -> Optional[dict]:
+    """Return current cycle phase info for the user. None if no log exists.
+
+    `user` is the User object (threaded so day-of-cycle anchors on the user's local day).
+    """
     from backend.models.database import CycleLog
     row = db.query(CycleLog).filter(
-        CycleLog.user_id == user_id,
+        CycleLog.user_id == user.id,
     ).order_by(CycleLog.logged_at.desc()).first()
 
     if not row:
@@ -79,7 +84,7 @@ def get_current_phase(user_id: int, db: Session) -> Optional[dict]:
         return None
 
     cycle_length = normalize_cycle_length(row.cycle_length)
-    today = date.today()
+    today = user_local_now(user).date()
     days_since = (today - lps).days
 
     # Compute which cycle number we're in
