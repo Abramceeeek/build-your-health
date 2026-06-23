@@ -302,7 +302,11 @@ async def register_user(
             gym_days_per_week=data.gym_days_per_week,
             age=data.age,
         )
-        week_start = user_today_str(user)
+        # week_start must be the Monday of the user's current local week — that is the
+        # key stats/targets lookups use. Storing *today* hid the target on any non-Monday.
+        from datetime import timedelta
+        now_local = user_local_now(user)
+        week_start = (now_local - timedelta(days=now_local.weekday())).strftime("%Y-%m-%d")
         db.add(NutritionTarget(user_id=user.id, week_start=week_start, **t))
 
     db.commit()
