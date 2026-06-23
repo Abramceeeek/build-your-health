@@ -3,8 +3,8 @@
 Cost design:
   - GET /api/coach/today  → templated, no LLM call.
   - POST /api/coach/message → Claude Haiku 4.5, max 200 output tokens, capped at
-    20 messages/user/day. Injury keywords flag the message so the next plan
-    generation prefixes a warning.
+    20 messages per user per local calendar day. Injury keywords flag the message
+    so the next plan generation prefixes a warning.
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from backend.models.database import (
 from backend.dependencies.paywall import require_pro
 from backend.rate_limit import check_rate_limit
 from backend.services.pubmed_service import is_advice_query, fetch_abstracts, build_research_context
-from backend.services.time_service import user_today_str
+from backend.services.time_service import user_day_start_utc, user_today_str
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/coach", tags=["coach"])
@@ -286,6 +286,21 @@ def _claude_reply(user: User, body: str, flagged_injury: bool, research_context:
     return _safe_fallback(flagged_injury)
 
 
+def _freeform_used_today(db: Session, user: User) -> int:
+    """Free-form messages the user has sent on THEIR local calendar day.
+
+    Buckets by the user's local day (via time_service), mirroring daily-task completion,
+    instead of a rolling 24h window — so the cap resets at the user's calendar midnight
+    and behaves consistently across local days. Only `role == "user"` rows are counted;
+    each POST inserts one user + one assistant row, so this is the count of sent messages.
+    """
+    return db.query(CoachMessage).filter(
+        CoachMessage.user_id == user.id,
+        CoachMessage.role == "user",
+        CoachMessage.created_at >= user_day_start_utc(user),
+    ).count()
+
+
 @router.post("/message")
 async def post_message(
     payload: MessageRequest,
@@ -294,9 +309,7 @@ async def post_message(
 ):
     user = get_or_create_user(db, tg_user)
 
-    if not check_rate_limit(
-        user.id, "coach_message", max_calls=DAILY_FREEFORM_LIMIT, window_seconds=86400,
-    ):
+    if _freeform_used_today(db, user) >= DAILY_FREEFORM_LIMIT:
         raise HTTPException(
             status_code=429,
             detail=f"Let's check in tomorrow — {DAILY_FREEFORM_LIMIT} messages/day.",

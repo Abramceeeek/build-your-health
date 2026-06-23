@@ -5,7 +5,8 @@ import pytest
 
 from backend.models.database import User
 from backend.services.time_service import (
-    _offset_minutes, local_from_utc, user_local_now, user_today_str, user_tz,
+    _offset_minutes, local_from_utc, user_day_start_utc, user_local_now,
+    user_today_str, user_tz,
 )
 
 
@@ -83,3 +84,33 @@ def test_user_local_now_is_aware_and_supports_weekday():
     now = user_local_now(_user(330))
     assert now.tzinfo is not None
     assert 0 <= now.weekday() <= 6
+
+
+# --- user_day_start_utc: naive UTC start of the user's local day --------------
+
+def test_day_start_is_naive_utc():
+    start = user_day_start_utc(_user(330))
+    assert start.tzinfo is None  # comparable against stored naive-UTC timestamps
+
+
+def test_day_start_offset_zero_is_utc_midnight_today():
+    start = user_day_start_utc(_user(0))
+    assert start.strftime("%Y-%m-%d") == datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert (start.hour, start.minute, start.second, start.microsecond) == (0, 0, 0, 0)
+
+
+@pytest.mark.parametrize("offset", [-12 * 60, -330, 0, 60, 330, 14 * 60])
+def test_day_start_maps_back_to_local_midnight(offset):
+    user = _user(offset)
+    start = user_day_start_utc(user)            # naive UTC instant
+    local = local_from_utc(start, user)         # naive treated as UTC, back to local
+    assert local.strftime("%Y-%m-%d") == user_today_str(user)
+    assert (local.hour, local.minute, local.second) == (0, 0, 0)
+
+
+def test_day_start_is_at_or_before_now_and_within_a_day():
+    # The local day always started in the last 24h, so its UTC instant is in (now-24h, now].
+    user = _user(330)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    start = user_day_start_utc(user)
+    assert now - timedelta(days=1) < start <= now
